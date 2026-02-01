@@ -1,3 +1,9 @@
+:host {
+  display: block;
+  flex-shrink: 0;
+  z-index: 50;
+}
+
 .sidebar {
   width: 260px;
   height: calc(100vh - 60px);
@@ -16,6 +22,17 @@
 
 .sidebar-header {
   margin-bottom: 2rem;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding-left: 0.25rem;
+}
+
+.sidebar-logo {
+  width: 32px;
+  height: 32px;
+  border-radius: 6px;
+  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.3));
 }
 
 .sidebar-title {
@@ -24,7 +41,8 @@
   letter-spacing: -0.5px;
   color: #fff;
   margin: 0;
-  background: linear-gradient(135deg, #fff 0%, #aaa 100%);
+  /* Use theme accent color */
+  background: linear-gradient(135deg, var(--beats-red) 0%, var(--beats-red-soft, #fff) 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
 }
@@ -74,9 +92,10 @@
 }
 
 .nav-item.active {
-  background: rgba(255, 0, 51, 0.1);
+  background: var(--beats-red-glow, rgba(255, 0, 51, 0.1));
   color: var(--beats-red, #ff0033);
   font-weight: 700;
+  border-left: 3px solid var(--beats-red);
 }
 
 .nav-icon {

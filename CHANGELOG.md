@@ -2,6 +2,15 @@
 
 All notable changes to this project will be documented in this file.
 
+## [2.0.6] - 2026-01-31
+
+### Fixed
+
+- **UI Regression**: Fixed broken style encapsulation for Header and Sidebar components.
+- **Sidebar Layout**: Corrected flexbox display issues causing sidebar collapse.
+- **Theming**: Restored "Glassmorphism" variables and transparency effects.
+- **CSS Cleanup**: Removed ~600 lines of conflicting legacy styles.
+
 ## [2.0.5] - 2026-01-31
 
 ### Added

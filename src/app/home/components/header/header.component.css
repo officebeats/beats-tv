@@ -36,25 +36,19 @@
 
 .logo-section {
   display: flex;
-  flex-direction: column;
+  align-items: center;
 }
 
-.app-title {
-  font-size: 1.25rem;
-  font-weight: 800;
-  letter-spacing: -0.5px;
-  margin: 0;
-  background: linear-gradient(135deg, var(--beats-red, #ff0033) 0%, #ff5e3a 100%);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
+.app-logo {
+  height: 48px; /* Slightly larger for prominence */
+  width: auto;
+  filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.3));
+  transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
 }
 
-.app-subtitle {
-  font-size: 0.65rem;
-  text-transform: uppercase;
-  letter-spacing: 2px;
-  color: rgba(255, 255, 255, 0.4);
-  font-weight: 700;
+.app-logo:hover {
+  transform: scale(1.05) rotate(-2deg);
+  filter: drop-shadow(0 6px 12px rgba(255, 0, 51, 0.4));
 }
 
 /* Search Box Enhancements */
@@ -70,8 +64,8 @@
 
 .premium-glass-input:focus-within {
   background: rgba(255, 255, 255, 0.1) !important;
-  border-color: var(--beats-red, #ff0033);
-  box-shadow: 0 0 0 4px rgba(255, 0, 51, 0.15);
+  border-color: var(--beats-red);
+  box-shadow: 0 0 0 4px var(--beats-red-glow);
   transform: scale(1.01);
 }
 

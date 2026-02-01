@@ -1,4 +1,4 @@
-import { Component, EventEmitter, Input, Output } from '@angular/core';
+import { Component, EventEmitter, Input, Output, ViewEncapsulation } from '@angular/core';
 import { ViewMode } from '../../../models/viewMode';
 import { MediaType } from '../../../models/mediaType';
 import { MemoryService } from '../../../memory.service';
@@ -6,7 +6,8 @@ import { MemoryService } from '../../../memory.service';
 @Component({
   selector: 'app-sidebar',
   templateUrl: './sidebar.component.html',
-  styleUrl: './sidebar.component.css',
+  styleUrls: ['./sidebar.component.css'],
+  encapsulation: ViewEncapsulation.None,
 })
 export class SidebarComponent {
   @Input() currentViewType: ViewMode = ViewMode.All;

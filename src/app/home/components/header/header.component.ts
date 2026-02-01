@@ -6,13 +6,15 @@ import {
   ViewChild,
   ElementRef,
   AfterViewInit,
+  ViewEncapsulation,
 } from '@angular/core';
 import { fromEvent, filter, map, debounceTime, Subscription } from 'rxjs';
 
 @Component({
   selector: 'app-header',
   templateUrl: './header.component.html',
-  styleUrl: './header.component.css',
+  styleUrls: ['./header.component.css'],
+  encapsulation: ViewEncapsulation.None,
 })
 export class HeaderComponent implements AfterViewInit {
   @Input() selectedCount = 0;

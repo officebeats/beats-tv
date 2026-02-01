@@ -506,6 +506,12 @@ export class HomeComponent implements AfterViewInit, OnDestroy {
     let index = this.filters!.media_types.indexOf(mediaType);
     if (index == -1) this.filters!.media_types.push(mediaType);
     else this.filters!.media_types.splice(index, 1);
+
+    // Sync boolean flags for UI
+    this.chkLiveStream = this.filters!.media_types.includes(MediaType.livestream);
+    this.chkMovie = this.filters!.media_types.includes(MediaType.movie);
+    this.chkSerie = this.filters!.media_types.includes(MediaType.serie);
+
     this.load();
   }
 

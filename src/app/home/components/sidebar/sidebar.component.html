@@ -1,6 +1,7 @@
 <aside class="sidebar glass-effect">
   <div class="sidebar-header">
-    <h2 class="sidebar-title">Library</h2>
+    <img src="assets/logo.png" alt="Beats TV" class="sidebar-logo" />
+    <h2 class="sidebar-title">Beats TV</h2>
   </div>
 
   <nav class="sidebar-nav">
@@ -44,17 +45,17 @@
       <h3 class="section-label">Media Types</h3>
       <div class="media-switches">
         <label class="switch-item" [class.active]="chkLiveStream">
-          <input type="checkbox" [checked]="chkLiveStream" (change)="toggleMediaType(1)" />
+          <input type="checkbox" [checked]="chkLiveStream" (change)="toggleMediaType(0)" />
           <span class="dot live"></span>
           <span class="switch-label">Live TV</span>
         </label>
         <label class="switch-item" [class.active]="chkMovie">
-          <input type="checkbox" [checked]="chkMovie" (change)="toggleMediaType(2)" />
+          <input type="checkbox" [checked]="chkMovie" (change)="toggleMediaType(1)" />
           <span class="dot movie"></span>
           <span class="switch-label">Movies</span>
         </label>
         <label class="switch-item" [class.active]="chkSerie" *ngIf="showSeries">
-          <input type="checkbox" [checked]="chkSerie" (change)="toggleMediaType(3)" />
+          <input type="checkbox" [checked]="chkSerie" (change)="toggleMediaType(2)" />
           <span class="dot series"></span>
           <span class="switch-label">Series</span>
         </label>

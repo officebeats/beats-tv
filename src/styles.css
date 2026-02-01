@@ -34,7 +34,8 @@
     linear-gradient(180deg, #141414 0%, #080808 100%);
 }
 
-html, body {
+html,
+body {
   background: var(--app-bg);
   background-color: var(--beats-black);
   background-attachment: fixed;
@@ -374,7 +375,16 @@ body.theme-smooth-glass .app-header {
 }
 
 /* Glass Card Base - targets both Home (channel) and Settings (source) tiles */
-body.theme-smooth-glass .channel,
+body.theme-smooth-glass .channel {
+  background: linear-gradient(
+    180deg,
+    rgba(15, 15, 20, 0.85) 0%,
+    rgba(5, 5, 8, 0.95) 100%
+  ) !important;
+  border: 1px solid rgba(255, 255, 255, 0.1) !important;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5) !important;
+}
+
 body.theme-smooth-glass .source,
 body.theme-smooth-glass .modal-content,
 body.theme-smooth-glass .nav-tabs .nav-link,
@@ -384,23 +394,46 @@ body.theme-smooth-glass .selection-actions,
 body.theme-smooth-glass .card,
 body.theme-smooth-glass .list-group-item,
 body.theme-smooth-glass .mat-mdc-menu-panel {
-  background: var(--beats-surface) !important;
-  -webkit-backdrop-filter: blur(50px) saturate(150%) !important;
-  backdrop-filter: blur(50px) saturate(150%) !important;
-  border: 1px solid rgba(255, 255, 255, 0.1) !important;
-  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37) !important;
+  background: rgba(
+    255,
+    255,
+    255,
+    0.03
+  ) !important; /* Keep others light for contrast or darken them too? User said 'tiles'. */
+  -webkit-backdrop-filter: blur(25px) saturate(200%) !important;
+  backdrop-filter: blur(25px) saturate(200%) !important;
+  border: 1px solid rgba(255, 255, 255, 0.12) !important;
+  box-shadow: 0 4px 24px -1px rgba(0, 0, 0, 0.2) !important;
   transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+}
+
+/* Fix Active/Live text colors to WHITE in the Blue theme */
+body.theme-smooth-glass .nav-item.active,
+body.theme-smooth-glass .badge-live,
+body.theme-smooth-glass .btn-primary,
+body.theme-smooth-glass .switch-item.active .dot {
+  color: #ffffff !important;
+}
+
+body.theme-smooth-glass .nav-item.active {
+  background: #007aff !important; /* Solid blue for better legibility */
+  box-shadow: 0 4px 12px rgba(0, 122, 255, 0.3) !important;
+}
+
+body.theme-smooth-glass .badge-live {
+  background: #007aff !important;
+  border-color: #0084ff !important;
 }
 
 /* Premium Elevate Hover Effect - Shared between Home and Settings */
 body.theme-smooth-glass .channel:hover,
 body.theme-smooth-glass .source:hover {
-  background: rgba(255, 255, 255, 0.12) !important;
-  border-color: rgba(255, 255, 255, 0.3) !important;
-  transform: translateY(-4px) scale(1.02);
+  background: rgba(255, 255, 255, 0.08) !important;
+  border-color: rgba(255, 255, 255, 0.25) !important;
+  transform: translateY(-4px) scale(1.015);
   box-shadow:
-    0 20px 40px rgba(0, 0, 0, 0.4),
-    0 0 20px rgba(0, 122, 255, 0.4) !important; /* Blue glow */
+    0 12px 30px rgba(0, 0, 0, 0.3),
+    0 0 15px rgba(0, 122, 255, 0.2) !important;
   z-index: 50;
 }
 
