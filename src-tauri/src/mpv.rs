@@ -305,6 +305,8 @@ pub fn get_stable_params() -> String {
     args.push("--cache-secs=300");
     args.push("--cache-pause=yes");
     args.push("--cache-pause-wait=10"); // Massive 10s buffer lead after a drop
+    args.push("--demuxer-seekable-cache=yes"); // Keep seekable cache for VPN recovery
+    args.push("--force-seekable=yes"); // Force stream to be seekable for better recovery
     
     // Performance optimizations
     args.push("--framedrop=vo");
@@ -314,12 +316,15 @@ pub fn get_stable_params() -> String {
     args.push("--demuxer-thread=yes");
     args.push("--hr-seek=no"); // Disable high-res seeking to prevent frame jitter
     
-    // VPN-Optimized Reconnection & Network Tuning
+    // VPN-Optimized Reconnection & Network Tuning (ENHANCED)
     args.push("--stream-lavf-o-add=reconnect_streamed=1");
     args.push("--stream-lavf-o-add=reconnect_delay_max=5");
     args.push("--stream-lavf-o-add=reconnect_on_network_error=1");
-    args.push("--stream-lavf-o-add=timeout=120000000");
+    args.push("--stream-lavf-o-add=reconnect_at_eof=1"); // Reconnect at stream end
+    args.push("--stream-lavf-o-add=reconnect_on_http_error=4xx,5xx"); // Retry on HTTP errors
+    args.push("--stream-lavf-o-add=timeout=120000000"); // 2 minute timeout
     args.push("--stream-lavf-o-add=tcp_fastopen=1");
+    args.push("--network-timeout=120"); // 2 minute network timeout
     args.push("--tls-verify=no"); 
     args.push("--cache-on-disk=no");
     
