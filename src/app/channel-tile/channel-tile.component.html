@@ -23,7 +23,8 @@
         class="channel-image"
         *ngIf="channel?.image && showImage"
         [src]="channel?.image"
-        [alt]="channel?.name"
+        alt="{{ channel?.name || 'Channel Logo' }}"
+        title="{{ channel?.name || 'Channel Logo' }}"
         loading="lazy"
       />
       <div class="image-placeholder" *ngIf="!channel?.image || !showImage">
@@ -34,44 +35,44 @@
         </svg>
       </div>
     </div>
-    <div class="channel-info">
-      <div class="channel-title" [title]="channel?.name">{{ channel?.name }}</div>
-      <div class="channel-meta">
-        <span class="channel-source">{{ getSourceName() }}</span>
-        <div class="channel-badges">
-          <span class="badge-live" *ngIf="channel?.media_type === mediaTypeEnum.livestream"
-            >LIVE</span
-          >
-          <span class="badge-movie" *ngIf="channel?.media_type === mediaTypeEnum.movie">VOD</span>
-          <span class="badge-series" *ngIf="channel?.media_type === mediaTypeEnum.serie"
-            >SERIES</span
-          >
-          <span
-            class="badge-rating"
-            [ngClass]="{
-              'rating-high': (channel?.rating ?? 0) >= 7,
-              'rating-medium': (channel?.rating ?? 0) >= 5 && (channel?.rating ?? 0) < 7,
-              'rating-low': (channel?.rating ?? 0) < 5,
-            }"
-            *ngIf="
-              channel?.rating &&
-              (channel?.media_type === mediaTypeEnum.movie ||
-                channel?.media_type === mediaTypeEnum.serie)
-            "
-          >
-            <i class="fa fa-star"></i> {{ channel?.rating | number: "1.0-0" }}
-          </span>
-          <span
-            class="badge-year"
-            *ngIf="
-              channel?.release_date &&
-              (channel?.media_type === mediaTypeEnum.movie ||
-                channel?.media_type === mediaTypeEnum.serie)
-            "
-          >
-            {{ channel?.release_date | slice: 0 : 4 }}
-          </span>
+    <div class="channel-info-grid">
+      <div class="info-content">
+        <div class="channel-title" [title]="channel?.name">{{ channel?.name }}</div>
+        <div class="channel-meta">
+          <span class="channel-source">{{ getSourceName() }}</span>
         </div>
+      </div>
+      <div class="channel-badges">
+        <span class="badge-live" *ngIf="channel?.media_type === mediaTypeEnum.livestream"
+          >LIVE</span
+        >
+        <span class="badge-movie" *ngIf="channel?.media_type === mediaTypeEnum.movie">VOD</span>
+        <span class="badge-series" *ngIf="channel?.media_type === mediaTypeEnum.serie">SERIES</span>
+        <span
+          class="badge-rating"
+          [ngClass]="{
+            'rating-high': (channel?.rating ?? 0) >= 7,
+            'rating-medium': (channel?.rating ?? 0) >= 5 && (channel?.rating ?? 0) < 7,
+            'rating-low': (channel?.rating ?? 0) < 5,
+          }"
+          *ngIf="
+            channel?.rating &&
+            (channel?.media_type === mediaTypeEnum.movie ||
+              channel?.media_type === mediaTypeEnum.serie)
+          "
+        >
+          <i class="fa fa-star"></i> {{ channel?.rating | number: "1.0-0" }}
+        </span>
+        <span
+          class="badge-year"
+          *ngIf="
+            channel?.release_date &&
+            (channel?.media_type === mediaTypeEnum.movie ||
+              channel?.media_type === mediaTypeEnum.serie)
+          "
+        >
+          {{ channel?.release_date | slice: 0 : 4 }}
+        </span>
       </div>
     </div>
     <div class="channel-actions">
@@ -109,7 +110,7 @@
 </div>
 
 <div
-  style="visibility: hidden; position: fixed"
+  class="hidden-menu-trigger"
   [style.left.px]="menuTopLeftPosition.x"
   [style.top.px]="menuTopLeftPosition.y"
   [matMenuTriggerFor]="rightMenu"

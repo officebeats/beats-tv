@@ -3,45 +3,44 @@
 @import "@angular/material/prebuilt-themes/pink-bluegrey.css";
 @import "./assets/css/roboto.css";
 
-/* Beats TV Core Theme Variables - Claymorphism Edition */
+/* Beats TV Core Theme Variables - Smooth Glass Default */
 :root {
-  --beats-black: #0a0a0a;
-  --beats-dark-gray: #141414;
-  --beats-charcoal: #1a1a1a;
-  --beats-surface: #1e1e1e;
-  --beats-surface-light: #252525;
-  --beats-red: #ff0033;
-  --beats-red-soft: #cc0029;
-  --beats-red-glow: rgba(255, 0, 51, 0.35);
-  --beats-text-white: #f5f5f5;
-  --beats-text-gray: #a0a0a0;
+  --beats-black: #000000;
+  --beats-dark-gray: #121212;
+  --beats-charcoal: #1c1c1e;
+  --beats-surface: rgba(25, 25, 30, 0.45);
+  --beats-surface-light: rgba(255, 255, 255, 0.08);
+  --beats-red: #007aff; /* Apple Blue as primary accent */
+  --beats-red-soft: #5ac8fa;
+  --beats-red-glow: rgba(0, 122, 255, 0.5);
+  --beats-text-white: #ffffff;
+  --beats-text-gray: #aeb2b7;
 
-  /* Claymorphism Shadows */
-  --clay-shadow-dark: rgba(0, 0, 0, 0.6);
-  --clay-shadow-light: rgba(50, 50, 50, 0.15);
-  --clay-shadow-red: rgba(255, 0, 51, 0.15);
+  /* Glass Shadows & Depth */
+  --clay-shadow-dark: rgba(0, 0, 0, 0.4);
+  --clay-shadow-light: rgba(255, 255, 255, 0.1);
+  --clay-shadow-red: rgba(0, 122, 255, 0.3);
 
-  /* Claymorphism border radius */
-  --clay-radius-sm: 12px;
-  --clay-radius-md: 18px;
-  --clay-radius-lg: 24px;
+  /* Apple Style Radius */
+  --clay-radius-sm: 10px;
+  --clay-radius-md: 14px;
+  --clay-radius-lg: 22px;
   --clay-radius-xl: 32px;
 
-  /* Default Theme Background (Clay-Mation Spotlight) */
-  --app-bg:
-    radial-gradient(circle at 50% -10%, rgba(255, 255, 255, 0.08) 0%, transparent 50%),
-    radial-gradient(circle at 50% -20%, rgba(255, 255, 255, 0.04) 0%, transparent 30%),
-    linear-gradient(180deg, #141414 0%, #080808 100%);
+  /* Default Background (Pure Silk Wallpaper) */
+  --app-bg: url("./assets/app_wallpaper.png");
 }
 
 html,
 body {
-  background: var(--app-bg);
+  background: var(--app-bg) no-repeat center center fixed;
   background-color: var(--beats-black);
   background-attachment: fixed;
   background-size: cover;
   color: var(--beats-text-white);
   min-height: 100vh;
+  font-family:
+    -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "Helvetica Neue", sans-serif;
 }
 
 /* --- Bootstrap Overrides for Claymorphism Red Theme --- */
@@ -320,53 +319,46 @@ body {
    THEME DEFINITIONS
    ============================================ */
 
-/* Theme 0: Clay-Mation (Default - Red Claymorphism) */
+/* Theme 0: Smooth Glass (Default Aesthetic) */
+body.theme-smooth-glass {
+  /* Inherits from :root defaults */
+}
+
+/* Theme 1: Clay-Mation (Original Red Aesthetic) */
 body.theme-clay-mation {
+  --beats-black: #0a0a0a;
+  --beats-dark-gray: #141414;
+  --beats-charcoal: #1a1a1a;
+  --beats-surface: #1e1e1e;
+  --beats-surface-light: #252525;
   --beats-red: #ff0033;
   --beats-red-soft: #cc0029;
   --beats-red-glow: rgba(255, 0, 51, 0.35);
-}
+  --beats-text-white: #f5f5f5;
+  --beats-text-gray: #a0a0a0;
 
-/* Theme 1: Smooth Glass (Apple-style Glassmorphism) */
-body.theme-smooth-glass {
-  --beats-black: #000000;
-  --beats-dark-gray: #121212;
-  --beats-charcoal: #1c1c1e;
+  --clay-shadow-dark: rgba(0, 0, 0, 0.6);
+  --clay-shadow-light: rgba(50, 50, 50, 0.15);
+  --clay-shadow-red: rgba(255, 0, 51, 0.15);
 
-  /* Apple Glass Background Override - Pure Silk Wallpaper */
-  --app-bg: url("./assets/app_wallpaper.png");
-
-  /* Apple Glass Colors - Premium Depth */
-  --beats-surface: rgba(25, 25, 30, 0.45);
-  --beats-surface-light: rgba(255, 255, 255, 0.08);
-  --beats-red: #007aff; /* Apple Blue instead of red for this theme */
-  --beats-red-soft: #5ac8fa;
-  --beats-red-glow: rgba(0, 122, 255, 0.5);
-  --beats-text-white: #ffffff;
-  --beats-text-gray: #aeb2b7; /* Professional Apple Gray */
-
-  /* Glass Shadows & Depth */
-  --clay-shadow-dark: rgba(0, 0, 0, 0.4);
-  --clay-shadow-light: rgba(255, 255, 255, 0.1);
-  --clay-shadow-red: rgba(0, 122, 255, 0.3);
-
-  /* Apple styling radius - Cleaner, more professional cards */
-  --clay-radius-sm: 10px;
-  --clay-radius-md: 14px;
-  --clay-radius-lg: 22px;
+  --clay-radius-sm: 12px;
+  --clay-radius-md: 18px;
+  --clay-radius-lg: 24px;
   --clay-radius-xl: 32px;
+
+  --app-bg:
+    radial-gradient(circle at 50% -10%, rgba(255, 255, 255, 0.08) 0%, transparent 50%),
+    radial-gradient(circle at 50% -20%, rgba(255, 255, 255, 0.04) 0%, transparent 30%),
+    linear-gradient(180deg, #141414 0%, #080808 100%);
 }
 
-body.theme-smooth-glass {
-  /* Premium Glass Smoke Background */
-  background: var(--app-bg) no-repeat center center fixed !important;
-  background-size: cover !important;
-  font-family:
-    -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "Helvetica Neue", sans-serif;
+body.theme-clay-mation {
+  background: var(--app-bg) fixed !important;
+  font-family: "Roboto", sans-serif !important;
 }
 
-/* Global Header Override for Glass Theme */
-body.theme-smooth-glass .app-header {
+/* Global Header Override for Glass Theme (Default) */
+.app-header {
   background: rgba(255, 255, 255, 0.02) !important;
   border-bottom: 1px solid rgba(255, 255, 255, 0.05) !important;
   box-shadow: 0 4px 30px rgba(0, 0, 0, 0.1);
@@ -374,8 +366,8 @@ body.theme-smooth-glass .app-header {
   backdrop-filter: blur(25px) saturate(180%);
 }
 
-/* Glass Card Base - targets both Home (channel) and Settings (source) tiles */
-body.theme-smooth-glass .channel {
+/* Glass Card Base (Default) - targets both Home (channel) and Settings (source) tiles */
+.channel {
   background: linear-gradient(
     180deg,
     rgba(10, 10, 15, 0.65) 0%,
@@ -385,21 +377,16 @@ body.theme-smooth-glass .channel {
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.6) !important;
 }
 
-body.theme-smooth-glass .source,
-body.theme-smooth-glass .modal-content,
-body.theme-smooth-glass .nav-tabs .nav-link,
-body.theme-smooth-glass .btn-outline-primary,
-body.theme-smooth-glass .filterBox,
-body.theme-smooth-glass .selection-actions,
-body.theme-smooth-glass .card,
-body.theme-smooth-glass .list-group-item,
-body.theme-smooth-glass .mat-mdc-menu-panel {
-  background: rgba(
-    255,
-    255,
-    255,
-    0.03
-  ) !important; /* Keep others light for contrast or darken them too? User said 'tiles'. */
+.source,
+.modal-content,
+.nav-tabs .nav-link,
+.btn-outline-primary,
+.filterBox,
+.selection-actions,
+.card,
+.list-group-item,
+.mat-mdc-menu-panel {
+  background: rgba(255, 255, 255, 0.03) !important;
   -webkit-backdrop-filter: blur(25px) saturate(200%) !important;
   backdrop-filter: blur(25px) saturate(200%) !important;
   border: 1px solid rgba(255, 255, 255, 0.12) !important;
@@ -426,14 +413,14 @@ body.theme-smooth-glass .badge-live {
 }
 
 /* Premium Elevate Hover Effect - Shared between Home and Settings */
-body.theme-smooth-glass .channel:hover,
-body.theme-smooth-glass .source:hover {
+.channel:hover,
+.source:hover {
   background: rgba(255, 255, 255, 0.08) !important;
   border-color: rgba(255, 255, 255, 0.25) !important;
   transform: translateY(-4px) scale(1.015);
   box-shadow:
     0 12px 30px rgba(0, 0, 0, 0.3),
-    0 0 15px rgba(0, 122, 255, 0.2) !important;
+    0 0 15px var(--beats-red-glow) !important;
   z-index: 50;
 }
 

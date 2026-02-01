@@ -21,7 +21,7 @@
 }
 
 .sidebar-logo-container {
-  height: 60px; /* Match header height roughly */
+  height: 144px; /* Increased another 20% from 120px */
   display: flex;
   align-items: center;
   justify-content: center;
@@ -30,9 +30,9 @@
 }
 
 .sidebar-logo-persistent {
-  height: 42px; /* Scale logo appropriately within container */
+  height: 104px; /* Increased another 20% from 86px */
   width: auto;
-  filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.4));
+  filter: drop-shadow(0 4px 12px rgba(0, 0, 0, 0.6));
   transition: transform 0.3s ease;
 }
 
@@ -67,7 +67,7 @@
   flex: 1;
   display: flex;
   flex-direction: column;
-  gap: 1.5rem; /* Reduced from 2.5rem */
+  gap: 1rem; /* Tightened gap further for larger logo */
 }
 
 .section-label {

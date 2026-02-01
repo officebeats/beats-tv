@@ -77,7 +77,8 @@ export class AppComponent implements OnInit {
         const themeId = settings.theme ?? 0;
         console.log('Applying theme:', themeId);
         console.log('[AppComponent] applying theme id:', themeId);
-        const themeClasses = ['theme-clay-mation', 'theme-smooth-glass', 'theme-matrix-terminal'];
+        // New order: 0: Smooth Glass (Default), 1: Claymorphism, 2: Matrix Terminal
+        const themeClasses = ['theme-smooth-glass', 'theme-clay-mation', 'theme-matrix-terminal'];
         document.body.classList.remove(...themeClasses);
         if (themeId >= 0 && themeId < themeClasses.length) {
           document.body.classList.add(themeClasses[themeId]);
