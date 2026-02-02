@@ -349,6 +349,7 @@ pub fn get_bin(bin: &str) -> String {
     return get_bin_from_deps(bin);
 }
 
+#[cfg(not(target_os = "macos"))]
 fn get_bin_from_deps(bin: &str) -> String {
     let mut path = current_exe().unwrap();
     path.pop();
