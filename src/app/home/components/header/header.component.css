@@ -1,11 +1,16 @@
+app-header {
+  display: block;
+  position: sticky;
+  top: 0;
+  z-index: 1000;
+  width: 100%;
+}
+
 .glass-header {
   -webkit-backdrop-filter: blur(30px) saturate(180%);
   backdrop-filter: blur(30px) saturate(180%);
   border-bottom: 1px solid rgba(255, 255, 255, 0.08);
   padding: 0.75rem 2rem;
-  position: sticky;
-  top: 0;
-  z-index: 1000;
   box-shadow: 0 4px 30px rgba(0, 0, 0, 0.5);
 }
 
@@ -25,6 +30,8 @@
 .center-section {
   flex: 1;
   max-width: 800px;
+  min-width: 250px; /* Ensures search bar stays visible on narrow windows */
+  flex-shrink: 0;
 }
 
 .right-section {
@@ -40,8 +47,9 @@
 }
 
 .app-logo {
-  height: 48px; /* Slightly larger for prominence */
+  height: 48px;
   width: auto;
+  object-fit: contain;
   filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.3));
   transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
 }
@@ -64,8 +72,8 @@
 
 .premium-glass-input:focus-within {
   background: rgba(255, 255, 255, 0.1) !important;
-  border-color: var(--beats-red);
-  box-shadow: 0 0 0 4px var(--beats-red-glow);
+  border-color: var(--accent-primary);
+  box-shadow: 0 0 0 4px var(--accent-glow);
   transform: scale(1.01);
 }
 
@@ -110,7 +118,7 @@
 
 .spinning {
   animation: rotate 1s linear infinite;
-  color: var(--beats-red) !important;
+  color: var(--accent-primary) !important;
 }
 
 @keyframes rotate {
@@ -128,14 +136,14 @@
   align-items: center;
   gap: 0.75rem;
   padding: 0.4rem 0.75rem;
-  background: rgba(255, 0, 51, 0.1);
-  border: 1px solid rgba(255, 0, 51, 0.2);
+  background: var(--accent-glow);
+  border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: 10px;
 }
 
 .selection-badge {
   font-weight: 800;
-  color: var(--beats-red);
+  color: var(--accent-primary);
 }
 
 .btn-clear-selection {
@@ -185,9 +193,9 @@
 }
 
 .action-btn.active {
-  color: var(--beats-red);
-  background: rgba(255, 0, 51, 0.15);
-  border-color: rgba(255, 0, 51, 0.3);
+  color: var(--accent-primary);
+  background: var(--accent-glow);
+  border-color: var(--accent-primary);
 }
 
 .settings-btn:hover {
@@ -201,9 +209,62 @@
   pointer-events: none;
 }
 
+/* Stacked Icon Support */
+.action-btn-stacked {
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  border-radius: 10px;
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s;
+  position: relative;
+  color: #999;
+}
+
+.action-btn-stacked:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: #fff;
+  transform: translateY(-2px);
+}
+
+.action-btn-stacked.active {
+  color: var(--accent-primary);
+  background: var(--accent-glow);
+  border-color: var(--accent-primary);
+}
+
+.icon-stack {
+  position: relative;
+  width: 24px;
+  height: 24px;
+}
+
+.icon-stack .icon-main {
+  width: 22px;
+  height: 22px;
+  position: absolute;
+  top: 0;
+  left: 0;
+}
+
+.icon-stack .icon-sub {
+  width: 12px;
+  height: 12px;
+  position: absolute;
+  bottom: -2px;
+  right: -2px;
+  background: rgba(0, 0, 0, 0.8);
+  border-radius: 2px;
+  padding: 1px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
 @media (max-width: 900px) {
-  .app-subtitle,
-  .center-section {
+  .app-subtitle {
     display: none;
   }
 }

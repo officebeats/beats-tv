@@ -1,22 +1,29 @@
+.settings-header {
+  position: sticky;
+  top: 0;
+  z-index: 1100;
+  display: flex;
+  align-items: center;
+  padding: 1rem 2rem;
+  background: rgba(0, 0, 0, 0.4);
+  -webkit-backdrop-filter: blur(25px) saturate(180%);
+  backdrop-filter: blur(25px) saturate(180%);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: 0 4px 30px rgba(0, 0, 0, 0.5);
+}
+
 .arrow {
-  position: absolute;
-  top: 2%;
-  left: 2%;
   width: 2.5rem;
   height: 2.5rem;
   cursor: pointer;
   transition: transform 0.3s ease;
   color: var(--beats-red);
-}
-
-.arrow:hover {
-  transform: scale(125%);
-  filter: drop-shadow(0 0 5px var(--beats-red));
+  flex-shrink: 0;
 }
 
 .settings-page {
   min-height: 100vh;
-  padding-top: 5rem;
+  padding-top: 3rem;
   display: block !important;
   text-align: left !important;
 }

@@ -1,11 +1,13 @@
-<svg (click)="goBack()" class="arrow" fill="currentColor" viewBox="0 0 24 24">
-  <path
-    d="M2,12A10,10 0 0,1 12,2A10,10 0 0,1 22,12A10,10 0 0,1 12,22A10,10 0 0,1 2,12M18,11H10L13.5,7.5L12.08,6.08L6.16,12L12.08,17.92L13.5,16.5L10,13H18V11Z"
-  />
-</svg>
-<div class="settings-page container px-5 pb-5">
-  <h2 class="mt-4 mb-5 text-center">Settings</h2>
+<div class="settings-header">
+  <svg (click)="goBack()" class="arrow" fill="currentColor" viewBox="0 0 24 24">
+    <path
+      d="M2,12A10,10 0 0,1 12,2A10,10 0 0,1 22,12A10,10 0 0,1 12,22A10,10 0 0,1 2,12M18,11H10L13.5,7.5L12.08,6.08L6.16,12L12.08,17.92L13.5,16.5L10,13H18V11Z"
+    />
+  </svg>
+  <h2 class="m-0 text-center flex-grow-1">Settings</h2>
+</div>
 
+<div class="settings-page container px-5 pb-5">
   <div class="settings-card">
     <h4 class="mb-4 text-info fw-bold">General Settings</h4>
     <div class="row align-items-center">
@@ -273,7 +275,7 @@
                 </svg>
                 {{ dep.path }}
               </div>
-              <div class="small text-muted" *ngIf="dep.version" style="opacity: 0.6">
+              <div class="small text-muted" *ngIf="dep.version">
                 {{ dep.version }}
               </div>
               <div class="small text-danger" *ngIf="!dep.installed">Not Found</div>
