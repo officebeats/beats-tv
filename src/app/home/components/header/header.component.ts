@@ -9,6 +9,7 @@ import {
   ViewEncapsulation,
 } from '@angular/core';
 import { fromEvent, filter, map, debounceTime, Subscription } from 'rxjs';
+import { FilterService } from '../../../services/filter.service';
 
 @Component({
   selector: 'app-header',
@@ -28,10 +29,13 @@ export class HeaderComponent implements AfterViewInit {
   @Output() openSettings = new EventEmitter<void>();
   @Output() reloadRequested = new EventEmitter<void>();
   @Output() searchChanged = new EventEmitter<string>();
+  @Output() openCategoryManager = new EventEmitter<void>();
 
   @ViewChild('searchInput') searchInput!: ElementRef;
 
   private searchSubscription?: Subscription;
+
+  constructor(public filterService: FilterService) {}
 
   ngAfterViewInit() {
     this.searchSubscription = fromEvent(this.searchInput.nativeElement, 'keyup')

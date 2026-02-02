@@ -1,0 +1,276 @@
+.category-manager-header {
+  background: rgba(20, 20, 20, 0.95);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  padding: 1rem 1.5rem;
+}
+
+.category-manager-body {
+  background: rgba(15, 15, 15, 0.98);
+  height: 85vh;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  padding: 1.25rem 1.5rem;
+}
+
+.top-actions-bar {
+  padding-bottom: 1rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.compact-input {
+  background: rgba(40, 40, 40, 0.6);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: white;
+  border-radius: 6px;
+  height: 38px;
+}
+
+.compact-input:focus {
+  background: rgba(60, 60, 60, 0.8);
+  border-color: var(--accent-primary);
+  box-shadow: 0 0 5px var(--accent-glow);
+  color: white;
+}
+
+/* --- Toggle Switch --- */
+.switch-toggle {
+  position: relative;
+  display: inline-block;
+  width: 40px;
+  height: 22px;
+}
+
+.switch-toggle input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.slider {
+  position: absolute;
+  cursor: pointer;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(255, 255, 255, 0.2);
+  transition: 0.4s;
+}
+
+.slider:before {
+  position: absolute;
+  content: "";
+  height: 16px;
+  width: 16px;
+  left: 3px;
+  bottom: 3px;
+  background-color: white;
+  transition: 0.4s;
+}
+
+input:checked + .slider {
+  background-color: #0d6efd; /* Bootstrap Primary */
+}
+
+input:checked + .slider:before {
+  transform: translateX(18px);
+}
+
+.slider.round {
+  border-radius: 34px;
+}
+
+.slider.round:before {
+  border-radius: 50%;
+}
+
+/* --- New Grid Layout --- */
+.families-grid-container {
+  flex: 1;
+  overflow-y: auto;
+  padding-top: 1rem;
+  padding-right: 8px;
+}
+
+.families-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 8px;
+}
+
+/* --- Family Card --- */
+.family-card {
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 8px;
+  transition: all 0.2s ease;
+  display: flex;
+  flex-direction: column;
+}
+
+.family-card:hover {
+  background: rgba(255, 255, 255, 0.06);
+  border-color: rgba(255, 255, 255, 0.15);
+  transform: translateY(-1px);
+}
+
+/* Card Header */
+.family-header {
+  padding: 8px 12px;
+  display: flex;
+  align-items: center;
+  cursor: pointer;
+  position: relative;
+  overflow: hidden;
+  transition:
+    opacity 0.3s ease,
+    background-color 0.2s;
+}
+
+/* Left Indicator Strip */
+.family-indicator {
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 4px;
+  transition: background-color 0.3s;
+}
+
+.status-all .family-indicator {
+  background-color: #198754;
+} /* Green */
+.status-partial .family-indicator {
+  background-color: #ffc107;
+} /* Warning */
+.status-none .family-indicator {
+  background-color: rgba(255, 255, 255, 0.1);
+} /* Gray */
+
+/* Whitelist Mode: Dim hidden items more aggressively */
+.status-none .family-header {
+  opacity: 0.5;
+}
+
+/* Prefix Text */
+.family-prefix {
+  font-weight: 700;
+  font-size: 0.9rem;
+  color: #eee;
+  margin-left: 4px;
+  flex-grow: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Meta Data */
+.family-meta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.badge-count {
+  font-size: 0.7rem;
+  background: rgba(0, 0, 0, 0.3);
+  padding: 2px 6px;
+  border-radius: 10px;
+  color: rgba(255, 255, 255, 0.6);
+}
+
+.expand-btn {
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+  color: rgba(255, 255, 255, 0.4);
+  position: relative;
+  z-index: 10;
+}
+
+.expand-btn:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: white;
+}
+
+.expand-btn svg {
+  display: block;
+  fill: currentColor;
+  pointer-events: none;
+}
+
+/* --- Drawer (Sub-Categories) --- */
+.family-drawer {
+  background: rgba(0, 0, 0, 0.3);
+  border-top: 1px solid rgba(255, 255, 255, 0.05);
+  max-height: 200px;
+  display: flex;
+  flex-direction: column;
+}
+
+.drawer-content {
+  overflow-y: auto;
+  padding: 4px 0;
+}
+
+.sub-category-row {
+  display: flex;
+  align-items: center;
+  padding: 4px 12px;
+  cursor: pointer;
+  font-size: 0.8rem;
+  transition: background 0.15s;
+}
+
+.sub-category-row:hover {
+  background: rgba(255, 255, 255, 0.05);
+}
+
+/* Status Dot */
+.sub-status-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.2);
+  margin-right: 8px;
+}
+
+.sub-status-dot.active {
+  background: #198754; /* Green */
+  box-shadow: 0 0 4px rgba(25, 135, 84, 0.6);
+}
+
+.sub-name {
+  flex-grow: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: #ddd;
+}
+
+.sub-name.text-muted {
+  text-decoration: line-through;
+  opacity: 0.5;
+}
+
+/* Custom Scrollbar */
+.customs-scroll::-webkit-scrollbar {
+  width: 6px;
+}
+
+.customs-scroll::-webkit-scrollbar-track {
+  background: rgba(0, 0, 0, 0.1);
+}
+
+.customs-scroll::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.15);
+  border-radius: 10px;
+}
+
+.customs-scroll::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.25);
+}

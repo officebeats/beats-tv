@@ -33,9 +33,7 @@ export class SidebarComponent {
 
   getLogoSrc(): string {
     const body = document.body;
-    if (body.classList.contains('theme-clay-mation')) {
-      return 'assets/logo_theme_0.png'; // Red (Now option 1)
-    } else if (body.classList.contains('theme-matrix-terminal')) {
+    if (body.classList.contains('theme-matrix-terminal')) {
       return 'assets/logo_theme_2.png'; // Green
     }
     // Default to Blue (theme-smooth-glass or no class)

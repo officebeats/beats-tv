@@ -34,7 +34,6 @@ import { MatDialog } from '@angular/material/dialog';
 import { SORT_TYPES, SortType, getSortTypeText } from '../models/sortType';
 import { Tag } from '../models/tag';
 import { ErrorService } from '../error.service';
-
 @Component({
   selector: 'app-settings',
   templateUrl: './settings.component.html',
@@ -42,7 +41,6 @@ import { ErrorService } from '../error.service';
 })
 export class SettingsComponent {
   subscriptions: Subscription[] = [];
-  activeTab = 'general';
   tags: Tag[] = [];
   settings: Settings = {
     use_stream_caching: true,
@@ -60,9 +58,8 @@ export class SettingsComponent {
   sources: Source[] = [];
   sortTypes = SORT_TYPES;
   themeOptions = [
-    { value: 0, label: 'Clay-Mation' },
-    { value: 1, label: 'Smooth Glass' },
-    { value: 2, label: 'Matrix Terminal' },
+    { value: 0, label: 'Smooth Glass' },
+    { value: 1, label: 'Matrix Terminal' },
   ];
 
   mpvPresets = [
@@ -129,7 +126,12 @@ export class SettingsComponent {
 
   getSettings() {
     this.tauri.call<Settings>('get_settings').then((x) => {
-      this.settings = x as Settings;
+      // Safety: If backend returns null, keep defaults. If partial, merge.
+      if (x) {
+        this.settings = { ...this.settings, ...x };
+      }
+
+      // Ensure defaults are set (in case backend sent partial object with missing keys)
       if (this.settings.use_stream_caching == undefined) this.settings.use_stream_caching = true;
       if (this.settings.default_view == undefined) this.settings.default_view = ViewMode.All;
       if (this.settings.volume == undefined) this.settings.volume = 100;
@@ -172,12 +174,11 @@ export class SettingsComponent {
       this.applyTheme(this.settings.theme);
     });
     this.getSources();
-    this.getTags();
   }
 
   applyTheme(themeId: number) {
-    const themeClasses = ['theme-clay-mation', 'theme-smooth-glass', 'theme-matrix-terminal'];
-    document.body.classList.remove(...themeClasses);
+    const themeClasses = ['theme-smooth-glass', 'theme-matrix-terminal'];
+    document.body.classList.remove('theme-clay-mation', ...themeClasses);
     if (themeId >= 0 && themeId < themeClasses.length) {
       document.body.classList.add(themeClasses[themeId]);
     }
@@ -186,83 +187,6 @@ export class SettingsComponent {
   onThemeChange() {
     this.applyTheme(this.settings.theme ?? 0);
     this.updateSettings();
-  }
-
-  getTags() {
-    this.tauri.call('detect_tags').then((tags) => {
-      let t = tags as Tag[];
-
-      this.tags = t.sort((a, b) => {
-        const aVisible = a.hidden_count < a.count;
-        const bVisible = b.hidden_count < b.count;
-
-        if (aVisible && !bVisible) return -1;
-        if (!aVisible && bVisible) return 1;
-
-        const priorityRegex = /^(USA|US|United States|English|EN)$/i;
-        const aPriority = priorityRegex.test(a.name);
-        const bPriority = priorityRegex.test(b.name);
-
-        if (aPriority && !bPriority) return -1;
-        if (!aPriority && bPriority) return 1;
-
-        return a.name.localeCompare(b.name);
-      });
-    });
-  }
-
-  toggleTag(tag: Tag, event: any) {
-    const visible = event.target.checked;
-    tag.hidden_count = visible ? 0 : tag.count;
-
-    this.tauri.call('set_tag_visibility', { tag: tag.name, visible: visible }).then((count) => {
-      this.toastr.success(`Updated visibility for ${count} channels`);
-      this.getTags();
-    });
-  }
-
-  contentTypeFilter: 'all' | 'live' | 'vod' | 'series' = 'all';
-
-  get filteredTags() {
-    if (this.contentTypeFilter === 'all') {
-      return this.tags;
-    }
-    return this.tags.filter((tag) => {
-      const t = tag as any;
-      if (this.contentTypeFilter === 'live') return t.count_live > 0;
-      if (this.contentTypeFilter === 'vod') return t.count_vod > 0;
-      if (this.contentTypeFilter === 'series') return t.count_series > 0;
-      return true;
-    });
-  }
-
-  updateContentTypeFilter(type: 'all' | 'live' | 'vod' | 'series') {
-    this.contentTypeFilter = type;
-  }
-
-  selectAllTags() {
-    this.bulkToggleTags(true);
-  }
-
-  deselectAllTags() {
-    this.bulkToggleTags(false);
-  }
-
-  bulkToggleTags(visible: boolean) {
-    const tagNames = this.filteredTags.map((t) => t.name);
-    this.tauri
-      .call('set_bulk_tag_visibility', { tags: tagNames, visible: visible })
-      .then((count) => {
-        this.toastr.success(`Updated visibility for ${count} tags`);
-        this.getTags();
-      })
-      .catch((e) => {
-        console.error('Bulk update failed, trying individual', e);
-        tagNames.forEach((name) => {
-          this.tauri.call('set_tag_visibility', { tag: name, visible: visible });
-        });
-        this.getTags();
-      });
   }
 
   refreshIntervals = [
@@ -311,7 +235,6 @@ export class SettingsComponent {
   }
 
   async refreshAll() {
-    console.log('refreshAll called, setting IsRefreshing = true');
     this.memory.IsRefreshing = true;
     this.memory.SeriesRefreshed.clear();
 
@@ -341,7 +264,6 @@ export class SettingsComponent {
     } catch (e) {
       this.error.handleError(e, 'Failed to refresh sources');
     } finally {
-      console.log('refreshAll complete, setting IsRefreshing = false');
       this.memory.IsRefreshing = false;
       this.memory.RefreshPlaylist = '';
       this.memory.RefreshActivity = '';

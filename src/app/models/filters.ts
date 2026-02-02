@@ -15,4 +15,5 @@ export class Filters {
   public season?: number;
   public rating_min?: number;
   public genre?: string;
+  public show_hidden?: boolean;
 }

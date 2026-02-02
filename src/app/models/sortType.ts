@@ -29,9 +29,9 @@ export function getSortTypeText(sortType?: SortType): String {
     case SortType.ratingAscending:
       return 'Lowest Rated';
     case SortType.dateDescending:
-      return 'Newest Added';
+      return 'Year Released';
     case SortType.dateAscending:
-      return 'Oldest Added';
+      return 'Oldest Released';
   }
   return '';
 }

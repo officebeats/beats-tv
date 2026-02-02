@@ -11,7 +11,21 @@
         class="nav-item"
         [class.active]="currentViewType === viewModeEnum.All"
       >
-        <span class="nav-icon">📁</span>
+        <span class="nav-icon">
+          <svg
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          >
+            <path
+              d="M3 9.5L12 3L21 9.5V19C21 20.1046 20.1046 21 19 21H5C3.89543 21 3 20.1046 3 19V9.5Z"
+            />
+            <path d="M9 21V12H15V21" />
+          </svg>
+        </span>
         <span>All</span>
       </button>
       <button
@@ -19,7 +33,21 @@
         class="nav-item"
         [class.active]="currentViewType === viewModeEnum.Categories"
       >
-        <span class="nav-icon">🍱</span>
+        <span class="nav-icon">
+          <svg
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          >
+            <rect x="3" y="3" width="7.5" height="7.5" rx="1.5" />
+            <rect x="13.5" y="3" width="7.5" height="7.5" rx="1.5" />
+            <rect x="13.5" y="13.5" width="7.5" height="7.5" rx="1.5" />
+            <rect x="3" y="13.5" width="7.5" height="7.5" rx="1.5" />
+          </svg>
+        </span>
         <span>Categories</span>
       </button>
       <button
@@ -27,7 +55,20 @@
         class="nav-item"
         [class.active]="currentViewType === viewModeEnum.Favorites"
       >
-        <span class="nav-icon">❤️</span>
+        <span class="nav-icon">
+          <svg
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          >
+            <path
+              d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"
+            />
+          </svg>
+        </span>
         <span>Favorites</span>
       </button>
       <button
@@ -35,28 +76,46 @@
         class="nav-item"
         [class.active]="currentViewType === viewModeEnum.History"
       >
-        <span class="nav-icon">🕙</span>
+        <span class="nav-icon">
+          <svg
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          >
+            <circle cx="12" cy="12" r="10" />
+            <path d="M12 6V12L16 14.5" />
+          </svg>
+        </span>
         <span>History</span>
       </button>
     </div>
 
-    <div class="nav-section">
-      <h3 class="section-label">Media Types</h3>
+    <div class="nav-section media-switches-section">
+      <div class="elegant-divider" title="Filter Media Types"></div>
       <div class="media-switches">
-        <label class="switch-item" [class.active]="chkLiveStream">
+        <label class="switch-item" [class.active]="chkLiveStream" title="Live TV">
           <input type="checkbox" [checked]="chkLiveStream" (change)="toggleMediaType(0)" />
-          <span class="dot live"></span>
-          <span class="switch-label">Live TV</span>
+          <div class="switch-content">
+            <span class="dot live"></span>
+            <span class="switch-label">Live</span>
+          </div>
         </label>
-        <label class="switch-item" [class.active]="chkMovie">
+        <label class="switch-item" [class.active]="chkMovie" title="Movies">
           <input type="checkbox" [checked]="chkMovie" (change)="toggleMediaType(1)" />
-          <span class="dot movie"></span>
-          <span class="switch-label">Movies</span>
+          <div class="switch-content">
+            <span class="dot movie"></span>
+            <span class="switch-label">Movies</span>
+          </div>
         </label>
-        <label class="switch-item" [class.active]="chkSerie" *ngIf="showSeries">
+        <label class="switch-item" [class.active]="chkSerie" *ngIf="showSeries" title="Series">
           <input type="checkbox" [checked]="chkSerie" (change)="toggleMediaType(2)" />
-          <span class="dot series"></span>
-          <span class="switch-label">Series</span>
+          <div class="switch-content">
+            <span class="dot series"></span>
+            <span class="switch-label">Series</span>
+          </div>
         </label>
       </div>
     </div>

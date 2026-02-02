@@ -102,6 +102,13 @@ pub struct Source {
 }
 
 #[derive(Clone, PartialEq, Debug, Deserialize, Serialize)]
+pub struct SourceFilterConfig {
+    pub live: Vec<String>,
+    pub movie: Vec<String>,
+    pub serie: Vec<String>,
+}
+
+#[derive(Clone, PartialEq, Debug, Deserialize, Serialize)]
 pub struct Settings {
     pub recording_path: Option<String>,
     pub mpv_params: Option<String>,
@@ -142,6 +149,7 @@ pub struct Filters {
     pub rating_min: Option<f32>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub genre: Option<String>,
+    pub show_hidden: Option<bool>,
 }
 
 #[derive(Clone, PartialEq, Debug, Deserialize, Serialize, Default)]

@@ -73,20 +73,31 @@ export class AppComponent implements OnInit {
       .call<Settings>('get_settings')
       .then((settings) => {
         console.log('Settings loaded:', settings);
-        // Force default theme for debugging if needed, or just log
-        const themeId = settings.theme ?? 0;
-        console.log('Applying theme:', themeId);
-        console.log('[AppComponent] applying theme id:', themeId);
-        // New order: 0: Smooth Glass (Default), 1: Claymorphism, 2: Matrix Terminal
-        const themeClasses = ['theme-smooth-glass', 'theme-clay-mation', 'theme-matrix-terminal'];
-        document.body.classList.remove(...themeClasses);
-        if (themeId >= 0 && themeId < themeClasses.length) {
-          document.body.classList.add(themeClasses[themeId]);
-          console.log('[AppComponent] Added class:', themeClasses[themeId]);
-        } else {
-          document.body.classList.add(themeClasses[0]);
-          console.warn('[AppComponent] Invalid theme ID, fallback to default:', themeClasses[0]);
-        }
+        // Consistently use 0: Smooth Glass, 1: Matrix Terminal
+        const themeClasses = ['theme-smooth-glass', 'theme-matrix-terminal'];
+
+        // Detect current class on body for defensive check
+        const hasMatrix = document.body.classList.contains('theme-matrix-terminal');
+        const hasGlass = document.body.classList.contains('theme-smooth-glass');
+
+        let rawTheme = settings.theme ?? 0;
+        let themeId = rawTheme;
+
+        // --- THEME MIGRATION LOGIC ---
+        // Old Mapping: 0=Clay (Red), 1=Glass (Blue), 2=Matrix (Green)
+        // New Mapping: 0=Glass (Blue), 1=Matrix (Green)
+
+        // If user was on old index 1 (Glass), move to 0.
+        // If user was on old index 2 (Matrix), move to 1.
+        // If user was on old index 0 (Clay), move to 0.
+        if (rawTheme === 1) themeId = 0;
+        else if (rawTheme === 2) themeId = 1;
+        else if (rawTheme > 2) themeId = 0;
+
+        console.log('[AppComponent] Migration: raw', rawTheme, 'mapped to', themeId);
+
+        document.body.classList.remove('theme-clay-mation', ...themeClasses);
+        document.body.classList.add(themeClasses[themeId]);
       })
       .catch((err) => console.error('[AppComponent] Error getting settings for theme:', err));
   }
