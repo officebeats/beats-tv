@@ -22,6 +22,7 @@
 use anyhow::Result;
 #[cfg(target_os = "windows")]
 use anyhow::Context;
+#[cfg(target_os = "windows")]
 use futures_util::StreamExt;
 #[cfg(target_os = "windows")]
 use reqwest::header::USER_AGENT;
@@ -32,6 +33,7 @@ use std::env::consts::OS;
 use std::path::Path;
 use std::process::Command;
 use tauri::{AppHandle, Emitter};
+#[cfg(target_os = "windows")]
 use tokio::io::AsyncWriteExt;
 use which::which;
 
