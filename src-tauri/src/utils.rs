@@ -62,7 +62,6 @@ static ILLEGAL_CHARS_REGEX: LazyLock<Regex> =
     LazyLock::new(|| Regex::new(r#"[<>:"/\\|?*\x00-\x1F]"#).unwrap());
 
 pub async fn refresh_source<R: tauri::Runtime>(app: &tauri::AppHandle<R>, source: Source) -> Result<()> {
-    use tauri::Emitter;
     let id = source.id;
     let source_name = source.name.clone();
     
@@ -96,7 +95,6 @@ pub async fn refresh_source<R: tauri::Runtime>(app: &tauri::AppHandle<R>, source
 }
 
 pub async fn refresh_all<R: tauri::Runtime>(app: &tauri::AppHandle<R>) -> Result<()> {
-    use tauri::Emitter;
     // Notify frontend start
     let _ = app.emit("refresh-start", ());
     

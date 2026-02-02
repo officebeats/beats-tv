@@ -22,7 +22,9 @@
 use anyhow::Context;
 use anyhow::Error;
 
-use tauri::{AppHandle, Manager, State, Emitter};
+use tauri::{AppHandle, Emitter, State};
+#[cfg(any(target_os = "macos", target_os = "windows"))]
+use tauri::Manager;
 use tokio::sync::Mutex;
 use types::{
     AppState, Channel, CustomChannel, CustomChannelExtraData, EPG, EPGNotify, Filters, Group,

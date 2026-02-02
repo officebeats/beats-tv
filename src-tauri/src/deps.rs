@@ -21,8 +21,10 @@
 
 use anyhow::{Result, anyhow, Context};
 use futures_util::StreamExt;
+#[cfg(target_os = "windows")]
 use reqwest::header::USER_AGENT;
 use serde::Serialize;
+#[cfg(target_os = "windows")]
 use serde_json::Value;
 use std::env::consts::OS;
 use std::path::Path;

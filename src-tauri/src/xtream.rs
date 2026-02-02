@@ -160,7 +160,6 @@ fn build_xtream_url(source: &mut Source) -> Result<Url> {
 }
 
 pub async fn get_xtream<R: tauri::Runtime>(app: &tauri::AppHandle<R>, mut source: Source, wipe: bool) -> Result<()> {
-    use tauri::Emitter;
     let url = build_xtream_url(&mut source)?;
     let user_agent = get_user_agent_from_source(&source)?;
     let client = Client::builder().user_agent(&user_agent).build()?;
