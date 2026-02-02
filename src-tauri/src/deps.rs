@@ -30,9 +30,13 @@ use serde::Serialize;
 #[cfg(target_os = "windows")]
 use serde_json::Value;
 use std::env::consts::OS;
+#[cfg(target_os = "windows")]
 use std::path::Path;
+#[cfg(target_os = "windows")]
 use std::process::Command;
-use tauri::{AppHandle, Emitter};
+use tauri::AppHandle;
+#[cfg(target_os = "windows")]
+use tauri::Emitter;
 #[cfg(target_os = "windows")]
 use tokio::io::AsyncWriteExt;
 use which::which;
