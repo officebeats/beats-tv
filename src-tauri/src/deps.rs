@@ -19,7 +19,9 @@
  * This project is a fork of Open TV by Fredolx.
  */
 
-use anyhow::{Result, anyhow, Context};
+use anyhow::{Result, anyhow};
+#[cfg(target_os = "windows")]
+use anyhow::Context;
 use futures_util::StreamExt;
 #[cfg(target_os = "windows")]
 use reqwest::header::USER_AGENT;

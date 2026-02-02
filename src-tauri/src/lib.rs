@@ -19,8 +19,9 @@
  * This project is a fork of Open TV by Fredolx.
  */
 
-use anyhow::Context;
 use anyhow::Error;
+#[cfg(any(target_os = "macos", target_os = "windows"))]
+use anyhow::Context;
 
 use tauri::{AppHandle, Emitter, State};
 #[cfg(any(target_os = "macos", target_os = "windows"))]

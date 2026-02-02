@@ -25,7 +25,6 @@ use crate::{
     log, media_type,
     sql::{self, insert_season},
 };
-use anyhow::anyhow;
 use anyhow::{Context, Result};
 use base64::Engine;
 use base64::prelude::BASE64_STANDARD;
