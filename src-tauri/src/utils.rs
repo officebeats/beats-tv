@@ -342,12 +342,10 @@ pub fn get_bin(bin: &str) -> String {
     if OS == "linux" || which(bin).is_ok() {
         return bin.to_string();
     }
-    
     #[cfg(target_os = "macos")]
-    {
-        return find_macos_bin(bin);
-    }
+    return find_macos_bin(bin);
     
+    #[cfg(not(target_os = "macos"))]
     return get_bin_from_deps(bin);
 }
 
