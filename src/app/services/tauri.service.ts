@@ -17,7 +17,7 @@ export class TauriService {
    * @param command The name of the command.
    * @param args Optional arguments for the command.
    */
-  async call<T>(command: string, args?: any): Promise<T> {
+  async call<T>(command: string, args?: Record<string, unknown>): Promise<T> {
     try {
       return await invoke<T>(command, args);
     } catch (error) {
@@ -67,7 +67,7 @@ export class TauriService {
     return await open(options);
   }
 
-  async saveDialog(options: any): Promise<string | null> {
+  async saveDialog(options: { defaultPath?: string; filters?: { name: string; extensions: string[] }[]; canCreateDirectories?: boolean; title?: string }): Promise<string | null> {
     const { save } = await import('@tauri-apps/plugin-dialog');
     return await save(options);
   }

@@ -61,8 +61,9 @@ const MACOS_POTENTIAL_PATHS: [&str; 3] = [
 
 const DEFAULT_USER_AGENT: &str = "Beats TV";
 
-static ILLEGAL_CHARS_REGEX: LazyLock<Regex> =
-    LazyLock::new(|| Regex::new(r#"[<>:"/\\|?*\x00-\x1F]"#).unwrap());
+static ILLEGAL_CHARS_REGEX: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new(r#"[<>:"/\\|?*\x00-\x1F]"#).expect("Failed to compile ILLEGAL_CHARS_REGEX - this is a static pattern and should never fail")
+});
 
 pub async fn refresh_source<R: tauri::Runtime>(app: &tauri::AppHandle<R>, source: Source) -> Result<()> {
     let id = source.id;
@@ -353,7 +354,10 @@ pub fn get_bin(bin: &str) -> String {
 
 #[cfg(not(target_os = "macos"))]
 fn get_bin_from_deps(bin: &str) -> String {
-    let mut path = current_exe().unwrap();
+    let mut path = current_exe().unwrap_or_else(|_| {
+        eprintln!("Failed to get current executable path, using fallback");
+        PathBuf::from(".")
+    });
     path.pop();
     path.push("deps");
     path.push(bin);

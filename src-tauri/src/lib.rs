@@ -69,10 +69,13 @@ static ENABLE_TRAY_ICON: LazyLock<bool> = LazyLock::new(|| {
 pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_single_instance::init(|app, _, _| {
-            let window = app.get_webview_window("main").expect("no main window");
-            let _ = window.unminimize();
-            let _ = window.show();
-            let _ = window.set_focus();
+            if let Some(window) = app.get_webview_window("main") {
+                let _ = window.unminimize();
+                let _ = window.show();
+                let _ = window.set_focus();
+            } else {
+                eprintln!("Main window not found during single instance check");
+            }
         }))
         .plugin(tauri_plugin_notification::init())
         .plugin(tauri_plugin_shell::init())
@@ -179,9 +182,10 @@ pub fn run() {
                 if !*ENABLE_TRAY_ICON {
                     return;
                 }
-                let window = _app.get_webview_window("main").expect("no main window");
-                let _ = window.show();
-                let _ = window.set_focus();
+                if let Some(window) = _app.get_webview_window("main") {
+                    let _ = window.show();
+                    let _ = window.set_focus();
+                }
             }
             _ => {}
         });
@@ -223,7 +227,7 @@ fn build_tray_icon(app: &mut tauri::App) -> anyhow::Result<()> {
             }
             _ => {}
         })
-        .icon(app.default_window_icon().unwrap().clone())
+        .icon(app.default_window_icon().ok_or_else(|| anyhow::anyhow!("No default window icon available"))?.clone())
         .build(app)?;
     Ok(())
 }

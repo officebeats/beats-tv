@@ -349,13 +349,15 @@ fn process_xtream<R: tauri::Runtime>(
         let category_name = get_cat_name(&cats, get_serde_json_string(&live.category_id).as_deref());
         convert_xtream_live_to_channel(live, source, stream_type, category_name)
             .and_then(|mut channel| {
-                sql::set_channel_group_id(
-                    &mut groups,
-                    &mut channel,
-                    tx,
-                    source.id.as_ref().unwrap(),
-                )
-                .unwrap_or_else(|e| log::log(format!("{:?}", e)));
+                if let Some(source_id) = source.id {
+                    sql::set_channel_group_id(
+                        &mut groups,
+                        &mut channel,
+                        tx,
+                        &source_id,
+                    )
+                    .unwrap_or_else(|e| log::log(format!("{:?}", e)));
+                }
                 sql::insert_channel(tx, channel)?;
                 Ok(())
             })
@@ -561,10 +563,11 @@ fn insert_episode(
     let season_id: i64 = match season_id {
         Some(s) => *s,
         None => {
+            let source_id = source.id.context("Source ID is required for episode insertion")?;
             let season = seasons
                 .get(&season_number)
                 .and_then(|f| {
-                    xtream_season_to_season(f, source.id.unwrap(), series_id)
+                    xtream_season_to_season(f, source_id, series_id)
                         .with_context(|| "Failed to convert XtreamSeason to Season")
                         .inspect_err(|e| log::log(format!("{}", e)))
                         .ok()
@@ -573,7 +576,7 @@ fn insert_episode(
                     create_makeshift_season(
                         season_number,
                         series_id,
-                        source.id.unwrap(),
+                        source_id,
                         default_season_image.clone(),
                     )
                 });

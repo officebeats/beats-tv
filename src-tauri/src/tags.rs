@@ -44,8 +44,8 @@ pub fn detect_tags(conn: &Connection) -> Result<Vec<Tag>> {
     // Regex to find tags:
     // 1. Matches [TAG] or (TAG)
     // 2. Matches prefixes ending in : or | or -
-    let re_brackets = Regex::new(r"\[(.*?)\]|\((.*?)\)").unwrap();
-    let re_prefix = Regex::new(r"^([A-Za-z0-9 ]{2,15})(:|\|| - )").unwrap();
+    let re_brackets = Regex::new(r"\[(.*?)\]|\((.*?)\)").expect("Failed to compile re_brackets regex");
+    let re_prefix = Regex::new(r"^([A-Za-z0-9 ]{2,15})(:|\|| - )").expect("Failed to compile re_prefix regex");
 
     // List of common ISO country codes and languages (and common IPTV variations)
     // Extended list to cover major regions.

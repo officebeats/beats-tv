@@ -28,7 +28,7 @@ export class PlaylistService {
     return await this.tauri.call<void>('on_start_check_epg');
   }
 
-  async bulkUpdate(filters: any, action: number): Promise<void> {
+  async bulkUpdate(filters: Filters, action: number): Promise<void> {
     return await this.tauri.call<void>('bulk_update', { filters, action });
   }
 

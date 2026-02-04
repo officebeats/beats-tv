@@ -9,6 +9,7 @@ import { TauriService } from './services/tauri.service';
 import { SortType } from './models/sortType';
 import { LAST_SEEN_VERSION } from './models/localStorage';
 import { SetNodeDTO } from './models/setNodeDTO';
+import { Settings } from './models/settings';
 
 @Injectable({
   providedIn: 'root',
@@ -53,7 +54,8 @@ export class MemoryService {
   public trayEnabled?: boolean;
   public IsContainer?: boolean;
   public AlwaysAskSave?: boolean;
-  public settings: any = {};
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  public settings: Settings = {};
 
   async tryIPC<T>(
     successMessage: string,

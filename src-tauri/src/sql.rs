@@ -45,7 +45,10 @@ use rusqlite_migration::{M, Migrations};
 const PAGE_SIZE: u8 = 36;
 pub const DB_NAME: &str = "db.sqlite";
 static CONN: LazyLock<Pool<SqliteConnectionManager>> = LazyLock::new(|| {
-    create_connection_pool().expect("Failed to initialize database connection pool")
+    create_connection_pool().unwrap_or_else(|e| {
+        eprintln!("CRITICAL: Failed to initialize database connection pool: {:?}", e);
+        std::process::exit(1);
+    })
 });
 
 pub fn get_conn() -> Result<PooledConnection<SqliteConnectionManager>> {
@@ -488,23 +491,23 @@ pub fn set_channel_group_id(
     tx: &Transaction,
     source_id: &i64,
 ) -> Result<()> {
-    if channel.group.is_none() {
-        return Ok(());
-    }
-    if !groups.contains_key(channel.group.as_ref().unwrap()) {
+    let group_name = match &channel.group {
+        Some(name) => name,
+        None => return Ok(()),
+    };
+    
+    if !groups.contains_key(group_name) {
         let id = get_or_insert_group(
             tx,
-            channel.group.as_ref().unwrap(),
+            group_name,
             &channel.image,
             source_id,
             channel.media_type,
         )?;
-        groups.insert(channel.group.clone().unwrap(), id);
+        groups.insert(group_name.clone(), id);
         channel.group_id = Some(id);
     } else {
-        channel.group_id = groups
-            .get(channel.group.as_ref().unwrap())
-            .map(|x| x.to_owned());
+        channel.group_id = groups.get(group_name).copied();
     }
     Ok(())
 }
@@ -580,7 +583,7 @@ pub fn search(filters: Filters) -> Result<Vec<Channel>> {
     let offset: u16 = filters.page as u16 * PAGE_SIZE as u16 - PAGE_SIZE as u16;
     let media_types = match filters.series_id.is_some() {
         true => vec![1],
-        false => filters.media_types.clone().unwrap(),
+        false => filters.media_types.clone().unwrap_or_default(),
     };
     let query = filters.query.unwrap_or("".to_string());
     let keywords: Vec<String> = match filters.use_keywords {
@@ -978,7 +981,7 @@ fn search_hidden(filters: Filters) -> Result<Vec<Channel>> {
 
     let media_types = match filters.series_id.is_some() {
         true => vec![1],
-        false => filters.media_types.clone().unwrap(),
+        false => filters.media_types.clone().unwrap_or_default(),
     };
 
     let query = filters.query.unwrap_or("".to_string());

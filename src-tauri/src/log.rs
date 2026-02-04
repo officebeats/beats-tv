@@ -55,13 +55,13 @@ fn init_logger() -> bool {
 }
 
 fn get_and_create_log_path() -> String {
-    let mut path = ProjectDirs::from("dev", "fredol", "open-tv")
-        .unwrap()
+    let mut path = ProjectDirs::from("com", "beatstv", "app")
+        .expect("Failed to get project directories")
         .cache_dir()
         .to_owned();
     path.push("logs");
     if !path.exists() {
-        std::fs::create_dir_all(&path).unwrap();
+        std::fs::create_dir_all(&path).expect("Failed to create logs directory");
     }
     path.push(get_log_name());
     return path.to_string_lossy().to_string();

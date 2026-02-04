@@ -40,23 +40,31 @@ use crate::{
     utils::get_user_agent_from_source,
 };
 
-static NAME_REGEX: LazyLock<Regex> =
-    LazyLock::new(|| Regex::new(r#"tvg-name="(?P<name>[^"]*)""#).unwrap());
-static NAME_REGEX_ALT: LazyLock<Regex> =
-    LazyLock::new(|| Regex::new(r#",(?P<name>[^\n\r\t]*)"#).unwrap());
-static ID_REGEX: LazyLock<Regex> =
-    LazyLock::new(|| Regex::new(r#"tvg-id="(?P<id>[^"]*)""#).unwrap());
-static LOGO_REGEX: LazyLock<Regex> =
-    LazyLock::new(|| Regex::new(r#"tvg-logo="(?P<logo>[^"]*)""#).unwrap());
-static GROUP_REGEX: LazyLock<Regex> =
-    LazyLock::new(|| Regex::new(r#"group-title="(?P<group>[^"]*)""#).unwrap());
+static NAME_REGEX: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new(r#"tvg-name="(?P<name>[^"]*)""#).expect("Failed to compile NAME_REGEX - static pattern")
+});
+static NAME_REGEX_ALT: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new(r#",(?P<name>[^\n\r\t]*)"#).expect("Failed to compile NAME_REGEX_ALT - static pattern")
+});
+static ID_REGEX: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new(r#"tvg-id="(?P<id>[^"]*)""#).expect("Failed to compile ID_REGEX - static pattern")
+});
+static LOGO_REGEX: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new(r#"tvg-logo="(?P<logo>[^"]*)""#).expect("Failed to compile LOGO_REGEX - static pattern")
+});
+static GROUP_REGEX: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new(r#"group-title="(?P<group>[^"]*)""#).expect("Failed to compile GROUP_REGEX - static pattern")
+});
 
-static HTTP_ORIGIN_REGEX: LazyLock<Regex> =
-    LazyLock::new(|| Regex::new(r#"http-origin=(?P<origin>.+)"#).unwrap());
-static HTTP_REFERRER_REGEX: LazyLock<Regex> =
-    LazyLock::new(|| Regex::new(r#"http-referrer=(?P<referrer>.+)"#).unwrap());
-static HTTP_USER_AGENT_REGEX: LazyLock<Regex> =
-    LazyLock::new(|| Regex::new(r#"http-user-agent=(?P<user_agent>.+)"#).unwrap());
+static HTTP_ORIGIN_REGEX: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new(r#"http-origin=(?P<origin>.+)"#).expect("Failed to compile HTTP_ORIGIN_REGEX - static pattern")
+});
+static HTTP_REFERRER_REGEX: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new(r#"http-referrer=(?P<referrer>.+)"#).expect("Failed to compile HTTP_REFERRER_REGEX - static pattern")
+});
+static HTTP_USER_AGENT_REGEX: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new(r#"http-user-agent=(?P<user_agent>.+)"#).expect("Failed to compile HTTP_USER_AGENT_REGEX - static pattern")
+});
 
 struct M3UProcessing {
     channel_line: Option<String>,
@@ -221,18 +229,18 @@ pub async fn get_m3u8_from_link(source: Source, wipe: bool) -> Result<()> {
     }
     let mut file = std::fs::File::create(get_tmp_path())?;
     while let Some(chunk) = response.chunk().await? {
-        file.write(&chunk)?;
+        file.write_all(&chunk)?;
     }
     read_m3u8(source, wipe)
 }
 
 fn get_tmp_path() -> String {
-    let mut path = directories::ProjectDirs::from("dev", "fredol", "open-tv")
-        .unwrap()
+    let mut path = directories::ProjectDirs::from("com", "beatstv", "app")
+        .expect("Failed to get project directories")
         .cache_dir()
         .to_owned();
     if !path.exists() {
-        std::fs::create_dir_all(&path).unwrap();
+        std::fs::create_dir_all(&path).expect("Failed to create cache directory");
     }
     path.push("get.m3u");
     return path.to_string_lossy().to_string();

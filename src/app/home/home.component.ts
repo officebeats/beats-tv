@@ -438,7 +438,7 @@ export class HomeComponent implements AfterViewInit, OnDestroy {
   }
 
   @HostListener('window:scroll', ['$event'])
-  async scroll(event: any) {
+  async scroll(_event: Event) {
     this.checkScrollTop();
     await this.checkScrollEnd();
   }
@@ -862,8 +862,10 @@ export class HomeComponent implements AfterViewInit, OnDestroy {
       event.preventDefault();
       this.nav(event.shiftKey ? 'ShiftTab' : 'Tab');
     }
-    if (event.key == 'Enter' && this.focusArea == FocusArea.Filters)
-      (document.activeElement as any).click();
+    if (event.key == 'Enter' && this.focusArea == FocusArea.Filters) {
+      const activeElement = document.activeElement as HTMLElement | null;
+      activeElement?.click();
+    }
   }
 
   selectFirstChannel() {
@@ -888,7 +890,8 @@ export class HomeComponent implements AfterViewInit, OnDestroy {
   }
 
   async bulkAction(action: BulkActionType) {
-    if (this.filters?.series_id && !this.filters?.season) {
+    if (!this.filters) return;
+    if (this.filters.series_id && !this.filters.season) {
       return;
     }
     const actionName = BulkActionType[action].toLowerCase();
