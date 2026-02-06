@@ -20,10 +20,11 @@ export class Settings {
   enhanced_video?: boolean;
   theme?: number; // 0=Smooth Glass, 1=Matrix Terminal
   vpn_mode?: boolean; // VPN mode for unstable connections
+  tmdb_api_key?: string; // TMDB API key for movie metadata
 
   /**
-   * Validates settings values
-   */
+    * Validates settings values
+    */
   static validate(settings: Partial<Settings>): string[] {
     const errors: string[] = [];
 

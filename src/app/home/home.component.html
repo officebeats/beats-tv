@@ -48,7 +48,7 @@
 
       <app-breadcrumb
         [visible]="
-          (!!filters?.view_type == !!viewModeEnum.Categories && !!filters?.group_id) ||
+          (filters?.view_type === viewModeEnum.Categories && !!filters?.group_id) ||
           !!filters?.series_id
         "
         [text]="nodeStack.get()?.toString() || ''"
@@ -85,7 +85,7 @@
         <div class="channels-container list-view" [@fade]="channelsVisible ? 'visible' : 'hidden'">
           <app-channel-tile
             [attr.id]="i == 0 ? 'first' : null"
-            *ngFor="let channel of channels; let i = index"
+            *ngFor="let channel of channels; let i = index; trackBy: trackByChannelId"
             class="channel-item"
             [id]="i"
             [channel]="channel"
@@ -96,6 +96,8 @@
             [selected]="selectedChannels.has(channel.id!)"
             (selectionToggled)="toggleChannelSelection($event)"
             (requestDetails)="openDetails($event)"
+            (mouseenter)="onChannelHover(channel)"
+            (mouseleave)="onChannelLeave()"
           ></app-channel-tile>
         </div>
 
@@ -149,6 +151,9 @@
   [channel]="selectedChannelForModal"
   [isOpen]="!!selectedChannelForModal"
   [isLoadingDetails]="isLoadingDetails"
+  [isLoadingMetadata]="isLoadingMetadata"
+  [movieData]="movieData"
   (close)="onModalClose()"
   (play)="onModalPlay()"
+  (openImdb)="openImdb()"
 ></app-content-detail-modal>

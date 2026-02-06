@@ -45,6 +45,7 @@ pub mod log;
 pub mod m3u;
 pub mod media_type;
 pub mod mpv;
+pub mod omdb;
 pub mod restream;
 pub mod security;
 pub mod settings;
@@ -53,6 +54,7 @@ pub mod sort_type;
 pub mod source_type;
 pub mod sql;
 pub mod tags;
+pub mod tmdb;
 pub mod types;
 pub mod utils;
 pub mod view_type;
@@ -149,6 +151,8 @@ pub fn run() {
             fetch_vod_info,
             get_mpv_preset,
             auto_install_dependency,
+            tmdb_search_and_cache,
+            omdb_search_and_cache,
         ])
         .setup(|app| {
             app.manage(Mutex::new(AppState {
@@ -344,12 +348,12 @@ fn hide_group(id: i64, hidden: bool) -> Result<(), String> {
     sql::hide_group(id, hidden).map_err(map_err_frontend)
 }
 
-#[tauri::command(async)]
+#[tauri::command(async, rename_all = "snake_case")]
 fn hide_groups_bulk(group_ids: Vec<i64>, hidden: bool) -> Result<(), String> {
     sql::hide_groups_bulk(group_ids, hidden).map_err(map_err_frontend)
 }
 
-#[tauri::command(async)]
+#[tauri::command(async, rename_all = "snake_case")]
 fn hide_channels_bulk(channel_ids: Vec<i64>, hidden: bool) -> Result<(), String> {
     sql::hide_channels_bulk(channel_ids, hidden).map_err(map_err_frontend)
 }
@@ -693,4 +697,18 @@ async fn get_mpv_preset(preset: String) -> Result<String, String> {
         "performance" => Ok(crate::mpv::get_performance_params()),
         _ => Ok(crate::mpv::get_stable_params()), // Default to stable
     }
+}
+
+#[tauri::command]
+async fn tmdb_search_and_cache(title: String, year: Option<i32>) -> Result<Option<crate::tmdb::TmdbMovieDetails>, String> {
+    crate::tmdb::search_and_get_details(&title, year)
+        .await
+        .map_err(|e| format!("{:?}", e))
+}
+
+#[tauri::command]
+async fn omdb_search_and_cache(title: String, year: Option<i32>) -> Result<Option<crate::omdb::MovieData>, String> {
+    crate::omdb::search_and_cache(&title, year)
+        .await
+        .map_err(|e| format!("{:?}", e))
 }

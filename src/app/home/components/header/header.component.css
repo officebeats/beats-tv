@@ -1,9 +1,10 @@
 app-header {
   display: block;
-  position: sticky;
+  position: fixed;
   top: 0;
+  left: 90px; /* Account for fixed sidebar */
+  right: 0;
   z-index: 1000;
-  width: 100%;
 }
 
 .glass-header {

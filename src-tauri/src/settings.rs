@@ -48,6 +48,7 @@ pub const ENHANCED_VIDEO: &str = "enhancedVideo";
 pub const THEME: &str = "theme";
 pub const PERFORMANCE_MODE: &str = "performanceMode";
 pub const VPN_MODE: &str = "vpnMode";
+pub const TMDB_API_KEY: &str = "tmdbApiKey";
 
 pub fn get_settings() -> Result<Settings> {
     let map = sql::get_settings()?;
@@ -79,6 +80,8 @@ pub fn get_settings() -> Result<Settings> {
         theme: map.get(THEME).and_then(|s| s.parse().ok()),
         // VPN mode enabled by default for unstable connections
         vpn_mode: map.get(VPN_MODE).and_then(|s| s.parse().ok()).or(Some(true)),
+        // TMDB API key for movie metadata
+        tmdb_api_key: map.get(TMDB_API_KEY).map(|s| s.to_string()),
     };
 
     // Safety: Filter out incompatible or buggy parameters from previous sessions
@@ -134,6 +137,7 @@ pub fn update_settings(settings: Settings) -> Result<()> {
     insert_if_some!(ENHANCED_VIDEO, settings.enhanced_video);
     insert_if_some!(THEME, settings.theme);
     insert_if_some!(VPN_MODE, settings.vpn_mode);
+    insert_if_some!(TMDB_API_KEY, settings.tmdb_api_key);
     
     sql::update_settings(map)?;
     Ok(())

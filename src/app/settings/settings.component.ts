@@ -173,7 +173,6 @@ export class SettingsComponent {
 
       this.applyTheme(this.settings.theme);
     });
-    this.getSources();
   }
 
   applyTheme(themeId: number) {
@@ -251,7 +250,7 @@ export class SettingsComponent {
         const source = sources[i];
         this.memory.RefreshCurrent = i + 1;
         this.memory.RefreshPlaylist = source.name || 'Source';
-        this.memory.RefreshActivity = `Refeshing ${source.name}...`;
+        this.memory.RefreshActivity = `Refreshing ${source.name}...`;
         this.memory.RefreshPercent = 0;
 
         try {

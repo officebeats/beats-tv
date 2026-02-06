@@ -7,7 +7,7 @@ import { ToastrService } from 'ngx-toastr';
 import { MemoryService } from '../../../memory.service';
 
 /**
- * Library Curator System 3.0 (Formerly Focus Manager)
+ * Library Editor System 3.0 (Formerly Library Curator / Focus Manager)
  */
 
 export interface CategoryGroup {
@@ -260,19 +260,25 @@ export class CategoryManagerModalComponent implements OnInit {
     const hideTarget = family.status === 'ALL';
 
     try {
+      // Debug: Log all children IDs before filtering
+      console.log(`[Editor] Family ${family.prefix} children:`, family.children.map(c => ({ id: c.id, name: c.name, idType: typeof c.id })));
+      
       // Safety: Ensure valid IDs and cast to integers
       const ids = family.children
         .map((c) => c.id)
-        .filter((id) => typeof id === 'number')
-        .map((id) => Math.floor(id!));
+        .filter((id): id is number => typeof id === 'number' && !isNaN(id) && id > 0)
+        .map((id) => Math.floor(id));
+
+      console.log(`[Editor] Filtered IDs for ${family.prefix}:`, ids);
 
       if (ids.length === 0) {
-        this.toastr.warning('No valid items to toggle in this family.');
+        this.toastr.warning(`No valid items to toggle in "${family.prefix}". Children have invalid IDs.`);
+        this.loading = false;
         return;
       }
 
       console.log(
-        `[Curator] Toggling family ${family.prefix} (${hideTarget ? 'HIDE' : 'SHOW'}) IDs:`,
+        `[Editor] Toggling family ${family.prefix} (${hideTarget ? 'HIDE' : 'SHOW'}) with ${ids.length} IDs:`,
         ids,
       );
       await this.tauri.call('hide_groups_bulk', { group_ids: ids, hidden: hideTarget });
@@ -283,9 +289,26 @@ export class CategoryManagerModalComponent implements OnInit {
       family.status = hideTarget ? 'NONE' : 'ALL';
 
       this.hasChanges = true;
-    } catch (e) {
-      console.error(e);
-      this.toastr.error('Failed to toggle family');
+      this.toastr.success(`${hideTarget ? 'Archived' : 'Restored'} ${family.prefix} (${ids.length} groups)`);
+    } catch (e: any) {
+      console.error('[Editor] Toggle family error:', e);
+      console.error('[Editor] Error type:', typeof e);
+      console.error('[Editor] Error keys:', e ? Object.keys(e) : 'null');
+      console.error('[Editor] Error JSON:', JSON.stringify(e, null, 2));
+      
+      // Extract error message from various formats
+      let errorMsg = 'Unknown error';
+      if (typeof e === 'string') {
+        errorMsg = e;
+      } else if (e?.message) {
+        errorMsg = e.message;
+      } else if (e?.error) {
+        errorMsg = typeof e.error === 'string' ? e.error : JSON.stringify(e.error);
+      } else if (e) {
+        errorMsg = JSON.stringify(e);
+      }
+      
+      this.toastr.error(`Failed to toggle "${family.prefix}": ${errorMsg}`);
     } finally {
       this.loading = false;
     }

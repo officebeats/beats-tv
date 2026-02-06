@@ -131,6 +131,7 @@ pub struct Settings {
     pub enhanced_video: Option<bool>,
     pub theme: Option<u8>,
     pub vpn_mode: Option<bool>,  // VPN mode for unstable connections
+    pub tmdb_api_key: Option<String>,  // TMDB API key for movie metadata
 }
 
 #[derive(Clone, PartialEq, Debug, Deserialize, Serialize)]

@@ -6,61 +6,164 @@
   </button>
 
   <div class="hero-section" *ngIf="channel">
-    <!-- Backdrop Image -->
-    <img
-      [src]="channel.image"
-      class="hero-backdrop-image"
-      alt="Backdrop"
-      onerror="this.src = 'assets/images/default-backdrop.jpg'"
-    />
-
+    <!-- Poster and Info Section -->
     <div class="hero-overlay">
-      <!-- Poster Card -->
-      <div class="poster-card">
+      <!-- Poster Card with loading state -->
+      <div class="poster-card" [class.loading]="!posterLoaded">
         <img
-          [src]="channel.image"
+          [src]="movieData?.posterUrl || channel.image"
           alt="Poster"
+          (load)="posterLoaded = true"
+          [class.loaded]="posterLoaded"
           onerror="this.src = 'assets/images/default-poster.jpg'"
         />
+        <div class="poster-skeleton" *ngIf="!posterLoaded">
+          <i class="fa fa-film"></i>
+        </div>
       </div>
 
       <!-- Hero Info -->
       <div class="hero-info">
-        <h1 class="title">{{ channel.name }}</h1>
+        <h1 class="title">{{ channel.name || movieData?.title }}</h1>
 
         <div class="meta-row">
-          <div class="rating-badge" *ngIf="channel.rating">
-            <i class="fa fa-star"></i> {{ channel.rating | number: "1.1-1" }}
+          <!-- IMDb Rating -->
+          <div
+            class="rating-badge imdb"
+            *ngIf="movieData?.imdbRating && (movieData?.imdbRating ?? 0) > 0"
+          >
+            <i class="fa fa-star"></i>
+            <span class="rating-value">{{ movieData?.imdbRating | number: "1.1-1" }}</span>
+            <span class="rating-source">IMDb</span>
+            <span
+              class="rating-count"
+              *ngIf="movieData?.imdbVotes && movieData?.imdbVotes !== 'N/A'"
+              >({{ formatVoteCount(movieData?.imdbVotes) }})</span
+            >
           </div>
-          <div class="year-badge" *ngIf="channel.release_date">
+
+          <!-- Rotten Tomatoes Rating -->
+          <div
+            class="rating-badge rotten"
+            *ngIf="movieData?.rottenTomatoes && movieData?.rottenTomatoes !== 'N/A'"
+          >
+            <span class="rating-value">{{ movieData?.rottenTomatoes }}</span>
+            <span class="rating-source">RT</span>
+          </div>
+
+          <!-- Metascore -->
+          <div class="rating-badge metascore" *ngIf="movieData?.metascore">
+            <span class="rating-value">{{ movieData?.metascore }}</span>
+            <span class="rating-source">Meta</span>
+          </div>
+
+          <!-- Fallback to channel rating -->
+          <div
+            class="rating-badge"
+            *ngIf="!movieData?.imdbRating && channel.rating && channel.rating > 0"
+          >
+            <i class="fa fa-star"></i>
+            <span>{{ channel.rating | number: "1.1-1" }}</span>
+          </div>
+
+          <!-- Year -->
+          <div class="year-badge" *ngIf="movieData?.year && movieData?.year !== 'N/A'">
+            {{ movieData?.year }}
+          </div>
+          <div
+            class="year-badge"
+            *ngIf="(!movieData?.year || movieData?.year === 'N/A') && channel.release_date"
+          >
             {{ channel.release_date | slice: 0 : 4 }}
           </div>
-          <div class="genre-tags" *ngIf="channel.genre">
-            <span class="genre-tag">{{ channel.genre }}</span>
+
+          <!-- Runtime -->
+          <div class="runtime-badge" *ngIf="formatRuntime(movieData?.runtime)">
+            <i class="fa fa-clock"></i>
+            {{ formatRuntime(movieData?.runtime) }}
+          </div>
+
+          <!-- MPAA Rating -->
+          <div class="certification-badge" *ngIf="movieData?.rated && movieData?.rated !== 'N/A'">
+            {{ movieData?.rated }}
           </div>
         </div>
 
+        <!-- Genre Pills -->
+        <div class="genre-pills" *ngIf="movieData?.genres?.length">
+          <span class="genre-pill" *ngFor="let genre of movieData?.genres">{{ genre }}</span>
+        </div>
+        <div class="genre-pills" *ngIf="!movieData?.genres?.length && channel.genre">
+          <span class="genre-pill">{{ channel.genre }}</span>
+        </div>
+
         <div class="action-buttons">
-          <button class="btn-play" (click)="play.emit()"><i class="fa fa-play"></i> Play</button>
+          <button class="btn-play" (click)="play.emit()">
+            <i class="fa fa-play"></i> Play Now
+          </button>
+          <button class="btn-imdb" *ngIf="movieData?.imdbId" (click)="onOpenImdb()">
+            <i class="fa fa-external-link"></i> IMDb
+          </button>
         </div>
       </div>
     </div>
   </div>
 
   <div class="modal-body" *ngIf="channel">
-    <p class="plot-summary" *ngIf="channel.plot">
-      {{ channel.plot }}
-    </p>
-    <div *ngIf="isLoadingDetails" class="loading-details">
-      <i class="fa fa-circle-notch fa-spin"></i> Loading details...
+    <!-- Loading State for Metadata -->
+    <div class="metadata-loading" *ngIf="isLoadingMetadata">
+      <div class="loading-pulse">
+        <i class="fa fa-film"></i>
+        <span>Loading movie details...</span>
+      </div>
     </div>
 
-    <div class="details-grid">
-      <div class="detail-item" *ngIf="channel.director">
-        <h4>Director</h4>
-        <p>{{ channel.director }}</p>
+    <!-- Plot Summary -->
+    <div class="plot-section" *ngIf="movieData?.plot || channel.plot">
+      <h3>Overview</h3>
+      <p class="plot-summary">{{ movieData?.plot || channel.plot }}</p>
+    </div>
+
+    <!-- Cast Section -->
+    <div class="cast-section" *ngIf="movieData?.actors?.length">
+      <h3>Cast</h3>
+      <div class="cast-list">
+        <span class="cast-name" *ngFor="let actor of movieData?.actors; let last = last">
+          {{ actor.name }}<span *ngIf="!last">, </span>
+        </span>
       </div>
-      <div class="detail-item" *ngIf="channel.cast">
+    </div>
+
+    <!-- Director & Writers -->
+    <div
+      class="crew-section"
+      *ngIf="movieData?.director || channel.director || movieData?.writers?.length"
+    >
+      <div class="crew-item" *ngIf="movieData?.director || channel.director">
+        <span class="crew-label">Director</span>
+        <span class="crew-value">{{ movieData?.director || channel.director }}</span>
+      </div>
+      <div class="crew-item" *ngIf="movieData?.writers?.length">
+        <span class="crew-label">Writers</span>
+        <span class="crew-value">{{ movieData?.writers?.join(", ") }}</span>
+      </div>
+    </div>
+
+    <!-- Awards -->
+    <div class="awards-section" *ngIf="movieData?.awards">
+      <h3>Awards</h3>
+      <p class="awards-text">{{ movieData?.awards }}</p>
+    </div>
+
+    <!-- Box Office -->
+    <div class="box-office-section" *ngIf="movieData?.boxOffice">
+      <h3>Box Office</h3>
+      <p class="box-office-text">{{ movieData?.boxOffice }}</p>
+    </div>
+
+    <!-- Additional Details Grid -->
+    <div class="details-grid">
+      <div class="detail-item" *ngIf="channel.cast && !movieData?.actors?.length">
         <h4>Cast</h4>
         <p>{{ channel.cast }}</p>
       </div>
@@ -68,6 +171,11 @@
         <h4>Added</h4>
         <p>{{ channel.added }}</p>
       </div>
+    </div>
+
+    <!-- OMDb Attribution -->
+    <div class="omdb-attribution" *ngIf="movieData">
+      <span>Data provided by OMDb API</span>
     </div>
   </div>
 </div>

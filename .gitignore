@@ -29,7 +29,7 @@ yarn-error.log
 .history/*
 
 # Miscellaneous
-/.angular/cache
+/.angular/
 .sass-cache/
 /connect.lock
 /coverage
@@ -40,3 +40,25 @@ testem.log
 # System files
 .DS_Store
 Thumbs.db
+
+# Log files
+*.log
+*_log.txt
+*_fail*.log
+*_status*.log
+
+# Test output files
+test_output.txt
+test_results*.txt
+/playwright-report/
+/test-results/
+
+# Temporary files
+temp_*
+*.tmp
+
+# Build artifacts
+build_*.txt
+
+# Rust/Tauri build artifacts
+/src-tauri/target/

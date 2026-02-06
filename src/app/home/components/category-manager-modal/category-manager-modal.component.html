@@ -1,13 +1,13 @@
 <div class="modal-header category-manager-header">
   <div class="header-left">
-    <h4 class="modal-title m-0">Library Curator</h4>
+    <h4 class="modal-title m-0">Library Editor</h4>
     <p class="text-muted small m-0">Select and manage your channel groups</p>
   </div>
   <button
     type="button"
     class="btn-close btn-close-white"
     (click)="closeModal()"
-    title="Close curator"
+    title="Close editor"
   ></button>
 </div>
 
@@ -98,6 +98,7 @@
         [class.status-none]="family.status === 'NONE'"
         [class.selected]="family.isSelected"
         [class.expanded]="family.expanded"
+        (click)="toggleFamily(family, $event)"
       >
         <!-- Card Content -->
         <div class="card-visual-wrapper">

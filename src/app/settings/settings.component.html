@@ -493,6 +493,32 @@
         </div>
       </div>
     </div>
+
+    <div class="row mt-3 align-items-center">
+      <div class="col-4">
+        <span
+          id="label-tmdb-api-key"
+          ngbTooltip="API key for The Movie Database (TMDB). Get yours free at themoviedb.org/settings/api"
+          >TMDB API Key</span
+        >
+      </div>
+      <div class="col">
+        <input
+          [(ngModel)]="settings.tmdb_api_key"
+          (ngModelChange)="updateSettings()"
+          class="form-control"
+          type="text"
+          placeholder="Enter your TMDB API key"
+          aria-labelledby="label-tmdb-api-key"
+          title="TMDB API Key"
+        />
+        <small class="text-muted">
+          <a href="https://www.themoviedb.org/settings/api" target="_blank" rel="noopener">
+            Get a free API key from TMDB
+          </a>
+        </small>
+      </div>
+    </div>
   </div>
 
   <h2 class="mt-4 mb-4 text-center">Sources</h2>

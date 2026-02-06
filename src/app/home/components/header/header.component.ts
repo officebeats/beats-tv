@@ -2,6 +2,7 @@ import {
   Component,
   EventEmitter,
   Input,
+  OnDestroy,
   Output,
   ViewChild,
   ElementRef,
@@ -17,7 +18,7 @@ import { FilterService } from '../../../services/filter.service';
   styleUrls: ['./header.component.css'],
   encapsulation: ViewEncapsulation.None,
 })
-export class HeaderComponent implements AfterViewInit {
+export class HeaderComponent implements AfterViewInit, OnDestroy {
   @Input() selectedCount = 0;
   @Input() selectionMode = false;
   @Input() bulkDisabled = false;
@@ -47,6 +48,10 @@ export class HeaderComponent implements AfterViewInit {
       .subscribe((term: string) => {
         this.searchChanged.emit(term);
       });
+  }
+
+  ngOnDestroy() {
+    this.searchSubscription?.unsubscribe();
   }
 
   onReload() {

@@ -52,7 +52,8 @@ static CONN: LazyLock<Pool<SqliteConnectionManager>> = LazyLock::new(|| {
 });
 
 pub fn get_conn() -> Result<PooledConnection<SqliteConnectionManager>> {
-    CONN.try_get().context("No sqlite conns available")
+    CONN.get_timeout(std::time::Duration::from_secs(30))
+        .context("Failed to get database connection (timeout after 30s)")
 }
 
 pub fn do_with_conn<F, T>(f: F) -> Result<T>
@@ -66,7 +67,9 @@ where
 fn create_connection_pool() -> Result<Pool<SqliteConnectionManager>> {
     let manager = SqliteConnectionManager::file(get_and_create_sqlite_db_path()?);
     r2d2::Pool::builder()
-        .max_size(20)
+        .max_size(50)
+        .min_idle(Some(5))
+        .connection_timeout(std::time::Duration::from_secs(30))
         .build(manager)
         .context("Failed to create database connection pool")
 }
@@ -284,6 +287,65 @@ fn apply_migrations() -> Result<()> {
               
               CREATE INDEX index_channels_rating ON channels(rating);
               CREATE INDEX index_channels_release_date ON channels(release_date);
+            "#,
+        ),
+        // Migration 10: TMDB cache table for movie metadata
+        M::up(
+            r#"
+              CREATE TABLE IF NOT EXISTS "tmdb_cache" (
+                "id" INTEGER PRIMARY KEY,
+                "tmdb_id" INTEGER NOT NULL,
+                "imdb_id" VARCHAR(20),
+                "title" VARCHAR(200) NOT NULL,
+                "original_title" VARCHAR(200),
+                "tagline" VARCHAR(500),
+                "overview" TEXT,
+                "release_date" VARCHAR(20),
+                "runtime" INTEGER,
+                "vote_average" REAL,
+                "vote_count" INTEGER,
+                "popularity" REAL,
+                "poster_path" VARCHAR(100),
+                "backdrop_path" VARCHAR(100),
+                "genres" TEXT,
+                "cast" TEXT,
+                "director" VARCHAR(100),
+                "trailer_key" VARCHAR(50),
+                "trailer_site" VARCHAR(20),
+                "fetched_at" INTEGER NOT NULL
+              );
+              CREATE UNIQUE INDEX IF NOT EXISTS index_tmdb_cache_tmdb_id ON tmdb_cache(tmdb_id);
+              CREATE INDEX IF NOT EXISTS index_tmdb_cache_title ON tmdb_cache(title);
+              CREATE INDEX IF NOT EXISTS index_tmdb_cache_fetched_at ON tmdb_cache(fetched_at);
+            "#,
+        ),
+        // Migration 11: OMDb cache table for movie metadata (free API with default key)
+        M::up(
+            r#"
+              CREATE TABLE IF NOT EXISTS "omdb_cache" (
+                "id" INTEGER PRIMARY KEY,
+                "imdb_id" VARCHAR(20),
+                "title" VARCHAR(200) NOT NULL,
+                "year" VARCHAR(10),
+                "rated" VARCHAR(10),
+                "runtime" VARCHAR(20),
+                "genre" TEXT,
+                "director" VARCHAR(200),
+                "writer" TEXT,
+                "actors" TEXT,
+                "plot" TEXT,
+                "poster" VARCHAR(500),
+                "imdb_rating" VARCHAR(10),
+                "imdb_votes" VARCHAR(20),
+                "metascore" VARCHAR(10),
+                "rotten_tomatoes" VARCHAR(10),
+                "awards" TEXT,
+                "box_office" VARCHAR(50),
+                "fetched_at" INTEGER NOT NULL
+              );
+              CREATE UNIQUE INDEX IF NOT EXISTS index_omdb_cache_title ON omdb_cache(title);
+              CREATE INDEX IF NOT EXISTS index_omdb_cache_imdb_id ON omdb_cache(imdb_id);
+              CREATE INDEX IF NOT EXISTS index_omdb_cache_fetched_at ON omdb_cache(fetched_at);
             "#,
         ),
     ]);
@@ -2060,4 +2122,233 @@ pub fn update_source_last_updated(source_id: i64) -> Result<()> {
         params![chrono::Utc::now().timestamp(), source_id],
     )?;
     Ok(())
+}
+
+// ============================================================================
+// TMDB Cache Functions
+// ============================================================================
+
+use crate::tmdb::TmdbCachedMovie;
+
+/// Get cached TMDB data by title (case-insensitive search)
+pub fn get_tmdb_cache_by_title(title: &str) -> Result<Option<TmdbCachedMovie>> {
+    let sql = get_conn()?;
+    let cached = sql
+        .query_row(
+            "SELECT * FROM tmdb_cache WHERE LOWER(title) = LOWER(?1) LIMIT 1",
+            params![title],
+            row_to_tmdb_cache,
+        )
+        .optional()?;
+    Ok(cached)
+}
+
+/// Get cached TMDB data by TMDB ID
+pub fn get_tmdb_cache_by_id(tmdb_id: i64) -> Result<Option<TmdbCachedMovie>> {
+    let sql = get_conn()?;
+    let cached = sql
+        .query_row(
+            "SELECT * FROM tmdb_cache WHERE tmdb_id = ?1 LIMIT 1",
+            params![tmdb_id],
+            row_to_tmdb_cache,
+        )
+        .optional()?;
+    Ok(cached)
+}
+
+/// Insert or update TMDB cache entry
+pub fn upsert_tmdb_cache(cached: TmdbCachedMovie) -> Result<()> {
+    let sql = get_conn()?;
+    sql.execute(
+        r#"
+        INSERT INTO tmdb_cache (
+            tmdb_id, imdb_id, title, original_title, tagline, overview,
+            release_date, runtime, vote_average, vote_count, popularity,
+            poster_path, backdrop_path, genres, cast, director,
+            trailer_key, trailer_site, fetched_at
+        ) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15, ?16, ?17, ?18, ?19)
+        ON CONFLICT(tmdb_id) DO UPDATE SET
+            imdb_id = excluded.imdb_id,
+            title = excluded.title,
+            original_title = excluded.original_title,
+            tagline = excluded.tagline,
+            overview = excluded.overview,
+            release_date = excluded.release_date,
+            runtime = excluded.runtime,
+            vote_average = excluded.vote_average,
+            vote_count = excluded.vote_count,
+            popularity = excluded.popularity,
+            poster_path = excluded.poster_path,
+            backdrop_path = excluded.backdrop_path,
+            genres = excluded.genres,
+            cast = excluded.cast,
+            director = excluded.director,
+            trailer_key = excluded.trailer_key,
+            trailer_site = excluded.trailer_site,
+            fetched_at = excluded.fetched_at
+        "#,
+        params![
+            cached.tmdb_id,
+            cached.imdb_id,
+            cached.title,
+            cached.original_title,
+            cached.tagline,
+            cached.overview,
+            cached.release_date,
+            cached.runtime,
+            cached.vote_average,
+            cached.vote_count,
+            cached.popularity,
+            cached.poster_path,
+            cached.backdrop_path,
+            cached.genres,
+            cached.cast,
+            cached.director,
+            cached.trailer_key,
+            cached.trailer_site,
+            cached.fetched_at
+        ],
+    )?;
+    Ok(())
+}
+
+/// Delete expired TMDB cache entries (older than specified days)
+pub fn cleanup_tmdb_cache(max_age_days: i64) -> Result<usize> {
+    let sql = get_conn()?;
+    let cutoff = chrono::Utc::now().timestamp() - (max_age_days * 24 * 60 * 60);
+    let count = sql.execute(
+        "DELETE FROM tmdb_cache WHERE fetched_at < ?1",
+        params![cutoff],
+    )?;
+    Ok(count)
+}
+
+fn row_to_tmdb_cache(row: &Row) -> Result<TmdbCachedMovie, rusqlite::Error> {
+    Ok(TmdbCachedMovie {
+        tmdb_id: row.get("tmdb_id")?,
+        imdb_id: row.get("imdb_id")?,
+        title: row.get("title")?,
+        original_title: row.get("original_title")?,
+        tagline: row.get("tagline")?,
+        overview: row.get("overview")?,
+        release_date: row.get("release_date")?,
+        runtime: row.get("runtime")?,
+        vote_average: row.get("vote_average")?,
+        vote_count: row.get("vote_count")?,
+        popularity: row.get("popularity")?,
+        poster_path: row.get("poster_path")?,
+        backdrop_path: row.get("backdrop_path")?,
+        genres: row.get("genres")?,
+        cast: row.get("cast")?,
+        director: row.get("director")?,
+        trailer_key: row.get("trailer_key")?,
+        trailer_site: row.get("trailer_site")?,
+        fetched_at: row.get("fetched_at")?,
+    })
+}
+
+// ============================================================================
+// OMDb Cache Functions (Free API with default key)
+// ============================================================================
+
+use crate::omdb::OmdbCachedMovie;
+
+/// Get cached OMDb data by title (case-insensitive search)
+pub fn get_omdb_cache_by_title(title: &str) -> Result<Option<OmdbCachedMovie>> {
+    let sql = get_conn()?;
+    let cached = sql
+        .query_row(
+            "SELECT * FROM omdb_cache WHERE LOWER(title) = LOWER(?1) LIMIT 1",
+            params![title],
+            row_to_omdb_cache,
+        )
+        .optional()?;
+    Ok(cached)
+}
+
+/// Insert or update OMDb cache entry
+pub fn upsert_omdb_cache(cached: OmdbCachedMovie) -> Result<()> {
+    let sql = get_conn()?;
+    sql.execute(
+        r#"
+        INSERT INTO omdb_cache (
+            imdb_id, title, year, rated, runtime, genre, director, writer,
+            actors, plot, poster, imdb_rating, imdb_votes, metascore,
+            rotten_tomatoes, awards, box_office, fetched_at
+        ) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15, ?16, ?17, ?18)
+        ON CONFLICT(title) DO UPDATE SET
+            imdb_id = excluded.imdb_id,
+            year = excluded.year,
+            rated = excluded.rated,
+            runtime = excluded.runtime,
+            genre = excluded.genre,
+            director = excluded.director,
+            writer = excluded.writer,
+            actors = excluded.actors,
+            plot = excluded.plot,
+            poster = excluded.poster,
+            imdb_rating = excluded.imdb_rating,
+            imdb_votes = excluded.imdb_votes,
+            metascore = excluded.metascore,
+            rotten_tomatoes = excluded.rotten_tomatoes,
+            awards = excluded.awards,
+            box_office = excluded.box_office,
+            fetched_at = excluded.fetched_at
+        "#,
+        params![
+            cached.imdb_id,
+            cached.title,
+            cached.year,
+            cached.rated,
+            cached.runtime,
+            cached.genre,
+            cached.director,
+            cached.writer,
+            cached.actors,
+            cached.plot,
+            cached.poster,
+            cached.imdb_rating,
+            cached.imdb_votes,
+            cached.metascore,
+            cached.rotten_tomatoes,
+            cached.awards,
+            cached.box_office,
+            cached.fetched_at
+        ],
+    )?;
+    Ok(())
+}
+
+/// Delete expired OMDb cache entries (older than specified days)
+pub fn cleanup_omdb_cache(max_age_days: i64) -> Result<usize> {
+    let sql = get_conn()?;
+    let cutoff = chrono::Utc::now().timestamp() - (max_age_days * 24 * 60 * 60);
+    let count = sql.execute(
+        "DELETE FROM omdb_cache WHERE fetched_at < ?1",
+        params![cutoff],
+    )?;
+    Ok(count)
+}
+
+fn row_to_omdb_cache(row: &Row) -> Result<OmdbCachedMovie, rusqlite::Error> {
+    Ok(OmdbCachedMovie {
+        imdb_id: row.get("imdb_id")?,
+        title: row.get("title")?,
+        year: row.get("year")?,
+        rated: row.get("rated")?,
+        runtime: row.get("runtime")?,
+        genre: row.get("genre")?,
+        director: row.get("director")?,
+        writer: row.get("writer")?,
+        actors: row.get("actors")?,
+        plot: row.get("plot")?,
+        poster: row.get("poster")?,
+        imdb_rating: row.get("imdb_rating")?,
+        imdb_votes: row.get("imdb_votes")?,
+        metascore: row.get("metascore")?,
+        rotten_tomatoes: row.get("rotten_tomatoes")?,
+        awards: row.get("awards")?,
+        box_office: row.get("box_office")?,
+        fetched_at: row.get("fetched_at")?,
+    })
 }
