@@ -156,8 +156,6 @@ jobs:
             find src-tauri/target/release/bundle/nsis -name "*.exe" -exec cp {} upload_payload/ \;
           elif [[ "${{ matrix.os }}" == "ubuntu-22.04" ]]; then
             find src-tauri/target/release/bundle/deb -name "*.deb" -exec cp {} upload_payload/ \;
-            find src-tauri/target/release/bundle/rpm -name "*.rpm" -exec cp {} upload_payload/ \;
-            find src-tauri/target/release/bundle/appimage -name "*.AppImage" -exec cp {} upload_payload/ \;
           elif [[ "${{ matrix.os }}" == "macos-latest" ]]; then
             # Harvest artifacts from all possible target locations
             find src-tauri/target/release/bundle/dmg -name "*.dmg" -exec cp {} upload_payload/ \; 2>/dev/null || true
