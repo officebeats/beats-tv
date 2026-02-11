@@ -60,6 +60,13 @@ temp_*
 # Build artifacts
 build_*.txt
 
+# Debug/log files
+backend_*.txt
+last_mpv_cmd.txt
+mpv_test_log.txt
+src-tauri/error.txt
+src-tauri/pfl_channels.txt
+
 # Rust/Tauri build artifacts
 /src-tauri/target/
 /src-tauri/deps/

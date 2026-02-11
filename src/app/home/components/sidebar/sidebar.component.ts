@@ -3,6 +3,13 @@ import { ViewMode } from '../../../models/viewMode';
 import { MediaType } from '../../../models/mediaType';
 import { MemoryService } from '../../../memory.service';
 
+export interface NavItem {
+  id: ViewMode;
+  label: string;
+  icon: 'home' | 'grid' | 'heart' | 'clock';
+  ariaLabel: string;
+}
+
 @Component({
   selector: 'app-sidebar',
   templateUrl: './sidebar.component.html',
@@ -21,6 +28,14 @@ export class SidebarComponent {
   @Output() mediaTypeToggled = new EventEmitter<MediaType>();
 
   viewModeEnum = ViewMode;
+
+  // Navigation items data
+  readonly navItems: NavItem[] = [
+    { id: ViewMode.All, label: 'All', icon: 'home', ariaLabel: 'View all channels' },
+    { id: ViewMode.Categories, label: 'Categories', icon: 'grid', ariaLabel: 'View categories' },
+    { id: ViewMode.Favorites, label: 'Favorites', icon: 'heart', ariaLabel: 'View favorites' },
+    { id: ViewMode.History, label: 'History', icon: 'clock', ariaLabel: 'View history' },
+  ];
 
   constructor(public memory: MemoryService) {}
 

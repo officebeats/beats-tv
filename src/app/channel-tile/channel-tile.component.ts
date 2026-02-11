@@ -89,6 +89,9 @@ export class ChannelTileComponent implements OnDestroy, AfterViewInit {
   }
 
   async click(record = false) {
+    // DEBUG: Alert on entry
+    // window.alert(`[Click] Tile Clicked! ID: ${this.channel?.id} Name: ${this.channel?.name}`);
+
     if (this.selectionMode) {
       if (this.channel?.id) {
         this.selectionToggled.emit(this.channel.id);
@@ -97,6 +100,7 @@ export class ChannelTileComponent implements OnDestroy, AfterViewInit {
     }
 
     if (this.starting === true) {
+      this.toastr.warning('Playback logic already active. Cancelling previous request...');
       try {
         await this.tauri.call('cancel_play', {
           sourceId: this.channel?.source_id,
@@ -105,21 +109,17 @@ export class ChannelTileComponent implements OnDestroy, AfterViewInit {
       } catch (e) {
         this.error.handleError(e);
       }
+      // Force reset if we cancelled
+      this.starting = false;
       return;
     }
+
+    // Media Type Logic
     if (
       this.channel?.media_type == MediaType.serie ||
       this.channel?.media_type == MediaType.movie
     ) {
-      if (
-        this.channel.media_type == MediaType.serie &&
-        !this.memory.SeriesRefreshed.has(this.channel.id!)
-      ) {
-        // Prefetch series episodes if needed, but we'll let the modal handle parsing/fetching?
-        // Actually, existing logic for series fetches episodes immediately.
-        // For now, let's just emit requestDetails. The Home component or Modal can decide to fetch.
-        // BUT wait, existing logic is inside the if block.
-      }
+      // this.toastr.info('Opening Details...');
       this.requestDetails.emit(this.channel);
       return;
     }
@@ -136,27 +136,45 @@ export class ChannelTileComponent implements OnDestroy, AfterViewInit {
       });
       return;
     }
-    let file = undefined;
-    if (record && (this.memory.IsContainer || this.memory.AlwaysAskSave)) {
-      file = await this.tauri.saveDialog({
-        canCreateDirectories: true,
-        title: 'Select where to save recording',
-        defaultPath: `${sanitizeFileName(this.channel?.name!)}_${getDateFormatted()}${RECORD_EXTENSION}`,
-      });
-      if (!file) return;
-    }
+
     this.starting = true;
     this.memory.SetFocus.next(this.id);
+
+    // DEBUG: Alert before play
+    // window.alert(`[Play] URL: ${this.channel?.url}`);
+
     try {
-      await this.tauri.call('play', { channel: this.channel, record: record, recordPath: file });
-    } catch (e) {
-      this.error.handleError(e);
+      if (!this.channel) return;
+      const simplifiedChannel = {
+        id: this.channel.id,
+        name: this.channel.name,
+        url: this.channel.url,
+        media_type: (this.channel as any).media_type || 0,
+        favorite: (this.channel as any).favorite || false,
+        source_id: this.channel.source_id,
+        hidden: false,
+      };
+      this.toastr.info(`Starting [V3]: ${this.channel.name}`, '', { timeOut: 2000 });
+      await this.tauri.call('play', {
+        channel: simplifiedChannel,
+        record: record,
+        record_path: null, // Explicitly pass record_path as null
+      });
+    } catch (e: any) {
+      console.error('[ChannelTile] Play failed:', e);
+      // Show ACTUAL backend error in Toast
+      this.toastr.error(
+        `Play Error: ${typeof e === 'string' ? e : e.message || 'Unknown'}`,
+        'Playback Failed',
+        { timeOut: 5000 },
+      );
+    } finally {
+      this.starting = false;
     }
+
     this.tauri.call('add_last_watched', { id: this.channel?.id }).catch((e) => {
       console.error(e);
-      this.error.handleError(e);
     });
-    this.starting = false;
   }
 
   onRightClick(event: MouseEvent) {

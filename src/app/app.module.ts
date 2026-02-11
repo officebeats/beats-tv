@@ -45,6 +45,7 @@ import { SidebarComponent } from './home/components/sidebar/sidebar.component';
 import { PlayerComponent } from './home/components/player/player.component';
 import { CategoryManagerModalComponent } from './home/components/category-manager-modal/category-manager-modal.component';
 import { AnimatedShaderBackgroundComponent } from './shared/components/animated-shader-background/animated-shader-background.component';
+import { IconComponent } from './shared/components/icon/icon.component';
 
 @NgModule({
   declarations: [
@@ -77,6 +78,7 @@ import { AnimatedShaderBackgroundComponent } from './shared/components/animated-
     PlayerComponent,
     CategoryManagerModalComponent,
     AnimatedShaderBackgroundComponent,
+    IconComponent,
   ],
   imports: [
     BrowserModule,

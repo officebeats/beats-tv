@@ -1,28 +1,30 @@
 import { FilterChip } from './filter-chips/filter-chips.component';
-import { AfterViewInit, Component, HostListener, OnDestroy, ViewChild } from '@angular/core';
+import {
+  AfterViewInit,
+  Component,
+  HostListener,
+  OnDestroy,
+  ViewChild,
+  OnInit,
+} from '@angular/core';
 import { Router } from '@angular/router';
 import { AllowIn, ShortcutInput } from 'ng-keyboard-shortcuts';
 import { NgbModal } from '@ng-bootstrap/ng-bootstrap';
-import { Subscription, skip, lastValueFrom, forkJoin, from } from 'rxjs';
+import { Subscription, from, forkJoin, lastValueFrom, skip } from 'rxjs';
 import { MemoryService } from '../memory.service';
 import { Channel } from '../models/channel';
 import { ViewMode } from '../models/viewMode';
 import { MediaType } from '../models/mediaType';
 import { ToastrService } from 'ngx-toastr';
-import { FocusArea, FocusAreaPrefix } from '../models/focusArea';
 import { Source } from '../models/source';
-import { Filters } from '../models/filters';
 import { SourceType } from '../models/sourceType';
 import { animate, state, style, transition, trigger } from '@angular/animations';
 import { ErrorService } from '../error.service';
 import { Settings } from '../models/settings';
 import { SortType } from '../models/sortType';
-
 import { LAST_SEEN_VERSION } from '../models/localStorage';
-
 import { Node } from '../models/node';
 import { NodeType } from '../models/nodeType';
-import { Stack } from '../models/stack';
 import { BulkActionType } from '../models/bulkActionType';
 import { TauriService } from '../services/tauri.service';
 import { SettingsService } from '../services/settings.service';
@@ -33,6 +35,9 @@ import { PlayerComponent } from './components/player/player.component';
 import { FilterService } from '../services/filter.service';
 import { CategoryManagerModalComponent } from './components/category-manager-modal/category-manager-modal.component';
 import { MovieMetadataService, MovieData } from '../services/movie-metadata.service';
+import { NavigationService } from '../services/navigation.service';
+import { SelectionService } from '../services/selection.service';
+import { ChannelLoaderService } from '../services/channel-loader.service';
 
 @Component({
   selector: 'app-home',
@@ -67,32 +72,22 @@ import { MovieMetadataService, MovieData } from '../services/movie-metadata.serv
     ]),
   ],
 })
-export class HomeComponent implements AfterViewInit, OnDestroy {
-  channels: Channel[] = [];
+export class HomeComponent implements OnInit, AfterViewInit, OnDestroy {
+  // Core State
   readonly viewModeEnum = ViewMode;
   bulkActionType = BulkActionType;
   readonly mediaTypeEnum = MediaType;
+
   @ViewChild('header') header!: HeaderComponent;
   @ViewChild('player') player!: PlayerComponent;
+
   shortcuts: ShortcutInput[] = [];
-  selectionMode: boolean = false;
-  selectedChannels: Set<number> = new Set();
-  focus: number = 0;
-  focusArea = FocusArea.Tiles;
-  viewType = ViewMode.All;
+  prevSearchValue: string = '';
+  showScrollTop = false;
+
+  // Window size tracking
   currentWindowSize: number = window.innerWidth;
   subscriptions: Subscription[] = [];
-  filters?: Filters;
-  chkLiveStream = true;
-  chkMovie = true;
-  chkSerie = true;
-  reachedMax = false;
-  readonly PAGE_SIZE = 36;
-  channelsVisible = true;
-  prevSearchValue: string = '';
-  loading = false;
-  nodeStack: Stack = new Stack();
-  showScrollTop = false;
 
   // New UI Properties
   filterChips: FilterChip[] = [
@@ -107,10 +102,6 @@ export class HomeComponent implements AfterViewInit, OnDestroy {
   isLoadingMetadata: boolean = false;
   movieData: MovieData | null = null;
 
-  scrollToTop() {
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-  }
-
   constructor(
     private router: Router,
     public memory: MemoryService,
@@ -123,8 +114,16 @@ export class HomeComponent implements AfterViewInit, OnDestroy {
     public filterService: FilterService,
     private modalService: NgbModal,
     private movieMetadataService: MovieMetadataService,
-  ) {
-    this.getSources();
+    public navigation: NavigationService,
+    public selection: SelectionService,
+    public channelLoader: ChannelLoaderService,
+  ) {}
+
+  ngOnInit() {
+    // Safety delay for Webview2 bridge stabilization
+    setTimeout(() => {
+      this.getSources();
+    }, 200);
   }
 
   openCategoryManager() {
@@ -147,13 +146,13 @@ export class HomeComponent implements AfterViewInit, OnDestroy {
   bulkActionFromBar(action: string) {
     switch (action) {
       case 'Favorite':
-        this.bulkActionOnSelected(this.bulkActionType.Favorite);
+        this.selection.bulkAction(this.bulkActionType.Favorite);
         break;
       case 'Hide':
-        this.bulkActionOnSelected(this.bulkActionType.Hide);
+        this.selection.bulkAction(this.bulkActionType.Hide);
         break;
       case 'Whitelist':
-        this.whitelistSelected();
+        this.selection.whitelistSelected();
         break;
     }
   }
@@ -170,8 +169,11 @@ export class HomeComponent implements AfterViewInit, OnDestroy {
         this.memory.trayEnabled = settings.enable_tray_icon ?? true;
         this.memory.AlwaysAskSave = settings.always_ask_save ?? false;
         this.memory.Sources = new Map(sources.filter((x) => x.enabled).map((s) => [s.id!, s]));
+
         if (sources.length == 0) {
           this.reset();
+        } else if (this.memory.Sources.size === 0) {
+          // All sources disabled warning removed or handled via UI state
         } else {
           this.tauri.getAppVersion().then((version) => {
             if (localStorage.getItem(LAST_SEEN_VERSION) != version) {
@@ -194,24 +196,12 @@ export class HomeComponent implements AfterViewInit, OnDestroy {
             sessionStorage.setItem('epgCheckedOnStart', 'true');
             this.playlistService.checkEpgOnStart();
           }
-          this.filters = {
-            source_ids: Array.from(this.memory.Sources.keys()),
-            view_type: settings.default_view ?? ViewMode.All,
-            media_types: [MediaType.livestream], // Default to Live TV only
-            page: 1,
-            use_keywords: false,
-            sort: SortType.provider,
-            show_hidden: false,
-          };
-          if (settings.default_sort != undefined && settings.default_sort != SortType.provider) {
-            this.memory.Sort.next([settings.default_sort, false]);
-            this.filters.sort = settings.default_sort;
-          }
 
-          // Default selection state
-          this.chkLiveStream = true;
-          this.chkMovie = false;
-          this.chkSerie = false;
+          // Initialize filters using FilterService
+          this.filterService.initializeFilters(
+            Array.from(this.memory.Sources.keys()),
+            settings.default_sort,
+          );
 
           // Refresh on start logic
           const refreshOnStart = settings.refresh_on_start === true;
@@ -234,7 +224,7 @@ export class HomeComponent implements AfterViewInit, OnDestroy {
 
           if (shouldRefresh) {
             sessionStorage.setItem('refreshedOnStart', 'true');
-            this.refreshAll(refreshReason).then((_) => _);
+            this.channelLoader.refreshAll(refreshReason).then((_) => _);
           }
 
           this.load().then((_) => _);
@@ -247,19 +237,7 @@ export class HomeComponent implements AfterViewInit, OnDestroy {
   }
 
   async refreshOnStart() {
-    await this.refreshAll('refresh on start enabled');
-  }
-
-  async refreshAll(reason: string = 'user requested') {
-    this.toast.info(`Refreshing all sources... (${reason})`);
-    try {
-      await this.playlistService.refreshAll();
-      this.memory.settings.last_refresh = Date.now();
-      await this.settingsService.updateSettings(this.memory.settings);
-      this.toast.success(`Successfully refreshed all sources (${reason})`);
-    } catch (e) {
-      this.error.handleError(e, `Failed to refresh all sources (${reason})`);
-    }
+    await this.channelLoader.refreshAll('refresh on start enabled');
   }
 
   async reload() {
@@ -273,32 +251,36 @@ export class HomeComponent implements AfterViewInit, OnDestroy {
   async addEvents() {
     this.subscriptions.push(
       this.memory.HideChannels.subscribe((val) => {
-        this.channelsVisible = val;
+        // Channels visibility is now managed by ChannelLoaderService
       }),
     );
     this.subscriptions.push(
       this.memory.SetFocus.subscribe((focus) => {
-        this.focus = focus;
+        this.navigation.focus = focus;
       }),
     );
     this.subscriptions.push(
       this.memory.SetNode.subscribe(async (dto) => {
-        this.nodeStack.add(
-          new Node(dto.id, dto.name, dto.type, this.filters?.query, this.filters?.view_type),
+        const node = new Node(
+          dto.id,
+          dto.name,
+          dto.type,
+          this.filterService.filters?.query,
+          this.filterService.filters?.view_type,
         );
-        if (dto.type == NodeType.Category) this.filters!.group_id = dto.id;
+        this.navigation.pushNode(node);
+        if (dto.type == NodeType.Category) this.filterService.setGroup(dto.id);
         else if (dto.type == NodeType.Series) {
-          this.filters!.series_id = dto.id;
-          this.filters!.source_ids = [dto.sourceId!];
-        } else if (dto.type == NodeType.Season) this.filters!.season = dto.id;
+          this.filterService.setSeries(dto.id, [dto.sourceId!]);
+        } else if (dto.type == NodeType.Season) this.filterService.setSeason(dto.id);
 
-        if (this.filters!.view_type == ViewMode.Hidden) {
-          this.filters!.view_type = ViewMode.Categories;
+        if (this.filterService.filters!.view_type == ViewMode.Hidden) {
+          this.filterService.switchViewMode(ViewMode.Categories);
         }
 
         this.clearSearch();
         await this.load();
-        if (this.focusArea == FocusArea.Tiles) this.selectFirstChannelDelayed(100);
+        if (this.navigation.focusArea == 0) this.navigation.selectFirstChannelDelayed(100);
       }),
     );
     this.subscriptions.push(
@@ -309,8 +291,8 @@ export class HomeComponent implements AfterViewInit, OnDestroy {
     );
     this.subscriptions.push(
       this.memory.Sort.pipe(skip(1)).subscribe(async ([sort, load]) => {
-        if (!this.filters || !load) return;
-        this.filters!.sort = sort;
+        if (!this.filterService.filters || !load) return;
+        this.filterService.filters!.sort = sort;
         await this.load();
       }),
     );
@@ -319,15 +301,13 @@ export class HomeComponent implements AfterViewInit, OnDestroy {
   clearSearch() {
     if (this.header) this.header.clearSearch();
     this.prevSearchValue = '';
-    this.filters!.query = '';
+    this.filterService.clearQuery();
   }
 
   onSearchChanged(term: string) {
-    this.focus = 0;
-    this.focusArea = FocusArea.Tiles;
-    if (this.channelsVisible && term != this.prevSearchValue) this.channelsVisible = false;
-    this.prevSearchValue = term;
-    this.filters!.query = term;
+    this.navigation.focus = 0;
+    this.navigation.focusArea = 0;
+    this.filterService.setQuery(term);
     this.load();
   }
 
@@ -336,84 +316,15 @@ export class HomeComponent implements AfterViewInit, OnDestroy {
   }
 
   async loadMore() {
-    this.load(true);
+    await this.channelLoader.loadMore(this.filterService.filters!);
   }
 
-  async load(more = false) {
-    this.loading = true;
-    if (more) {
-      this.filters!.page++;
-    } else {
-      this.filters!.page = 1;
-    }
-    this.filters!.show_hidden = false;
-
-    // Fix: Default to Live TV if no media types selected to prevent empty screen
-    if (!this.filters!.media_types || this.filters!.media_types.length === 0) {
-      this.filters!.media_types = [MediaType.livestream];
-      this.chkLiveStream = true;
-      this.chkMovie = false;
-      this.chkSerie = false;
-      this.filterChips.forEach((c) => (c.active = c.value === MediaType.livestream));
-    }
-
+  async load() {
     try {
-      let channels: Channel[] = await this.tauri.call<Channel[]>('search', {
-        filters: this.filters,
-      });
-
-      // Fallback search logic: if no results and filter is active, try searching across all categories
-      if (
-        !more &&
-        channels.length === 0 &&
-        this.filters!.query &&
-        this.filters!.media_types.length < 3
-      ) {
-        // Expand search to all types
-        this.chkLiveStream = true;
-        this.chkMovie = true;
-        this.chkSerie = true;
-        this.filters!.media_types = [MediaType.livestream, MediaType.movie, MediaType.serie];
-        channels = await this.tauri.call<Channel[]>('search', { filters: this.filters });
-        if (channels.length > 0) {
-          this.toast.info('No results in current category. Found matches in other areas!');
-        }
-      }
-
-      if (!more) {
-        let processedChannels = channels;
-
-        // --- SMART CATEGORY SORTING ---
-        // If we are looking at the Categories list, bump US/ENGLISH/UK to the top
-        if (this.filters!.view_type === this.viewModeEnum.Categories && !this.filters!.query) {
-          processedChannels = [...channels].sort((a, b) => {
-            const nameA = (a.name || '').toUpperCase();
-            const nameB = (b.name || '').toUpperCase();
-
-            const priorityRegex = /(USA|US|UK|ENGLISH|ENGLAND|BRITISH)/;
-            const aIsPriority = priorityRegex.test(nameA);
-            const bIsPriority = priorityRegex.test(nameB);
-
-            if (aIsPriority && !bIsPriority) return -1;
-            if (!aIsPriority && bIsPriority) return 1;
-            return nameA.localeCompare(nameB);
-          });
-        }
-
-        this.channels = processedChannels.filter((c) => this.filterService.isChannelVisible(c));
-        this.channelsVisible = true;
-        // prevent flicker of hiding opacity
-        this.viewType = this.filters!.view_type;
-      } else {
-        this.channels = this.channels.concat(
-          channels.filter((c) => this.filterService.isChannelVisible(c)),
-        );
-      }
-      this.reachedMax = channels.length < this.PAGE_SIZE;
+      await this.channelLoader.loadChannels(this.filterService.filters!, false);
     } catch (e) {
       this.error.handleError(e);
     }
-    this.loading = false;
   }
 
   checkScrollTop() {
@@ -423,11 +334,10 @@ export class HomeComponent implements AfterViewInit, OnDestroy {
   }
 
   async checkScrollEnd() {
-    if (this.reachedMax === true || this.loading === true) return;
     const scrollHeight = document.documentElement.scrollHeight;
     const scrollTop = window.scrollY || document.documentElement.scrollTop;
     const clientHeight = window.innerHeight || document.documentElement.clientHeight;
-    if (scrollTop + clientHeight >= scrollHeight * 0.75) {
+    if (this.channelLoader.shouldLoadMore(scrollTop, scrollHeight, clientHeight)) {
       await this.loadMore();
     }
   }
@@ -448,32 +358,32 @@ export class HomeComponent implements AfterViewInit, OnDestroy {
         description: 'Go to search',
         preventDefault: true,
         allowIn: [AllowIn.Input],
-        command: (_) => this.focusSearch(),
+        command: (_) => this.navigation.focusSearch(this.header?.searchInput?.nativeElement),
       },
       {
         key: ['ctrl + a', 'cmd + a'],
         label: 'Switching modes',
         description: 'Selects the all channels view',
         preventDefault: true,
-        command: async (_) => await this.switchMode(this.viewModeEnum.All),
+        command: async (_) => await this.filterService.switchViewMode(this.viewModeEnum.All),
       },
       {
         key: ['ctrl + s', 'cmd + s'],
         label: 'Switching modes',
         description: 'Selects the categories view',
-        command: async (_) => await this.switchMode(this.viewModeEnum.Categories),
+        command: async (_) => await this.filterService.switchViewMode(this.viewModeEnum.Categories),
       },
       {
         key: ['ctrl + d', 'cmd + d'],
         label: 'Switching modes',
         description: 'Selects the history view',
-        command: async (_) => await this.switchMode(this.viewModeEnum.History),
+        command: async (_) => await this.filterService.switchViewMode(this.viewModeEnum.History),
       },
       {
         key: ['ctrl + r', 'cmd + r'],
         label: 'Switching modes',
         description: 'Selects the favorites view',
-        command: async (_) => await this.switchMode(this.viewModeEnum.Favorites),
+        command: async (_) => await this.filterService.switchViewMode(this.viewModeEnum.Favorites),
       },
       {
         key: 'ctrl + q',
@@ -482,8 +392,7 @@ export class HomeComponent implements AfterViewInit, OnDestroy {
         preventDefault: true,
         allowIn: [AllowIn.Input],
         command: async (_) => {
-          this.chkLiveStream = !this.chkLiveStream;
-          this.updateMediaTypes(MediaType.livestream);
+          this.filterService.toggleMediaType(MediaType.livestream);
         },
       },
       {
@@ -493,8 +402,7 @@ export class HomeComponent implements AfterViewInit, OnDestroy {
         preventDefault: true,
         allowIn: [AllowIn.Input],
         command: async (_) => {
-          this.chkMovie = !this.chkMovie;
-          this.updateMediaTypes(MediaType.movie);
+          this.filterService.toggleMediaType(MediaType.movie);
         },
       },
       {
@@ -504,8 +412,7 @@ export class HomeComponent implements AfterViewInit, OnDestroy {
         preventDefault: true,
         allowIn: [AllowIn.Input],
         command: async (_) => {
-          this.chkSerie = !this.chkSerie;
-          this.updateMediaTypes(MediaType.serie);
+          this.filterService.toggleMediaType(MediaType.serie);
         },
       },
       {
@@ -541,61 +448,39 @@ export class HomeComponent implements AfterViewInit, OnDestroy {
     );
   }
 
-  // Debounce timer for media type toggles
-  private mediaTypeDebounceTimer: any = null;
+  async nav(key: string): Promise<boolean> {
+    if (this.navigation.isSearchFocused()) return false;
 
-  updateMediaTypes(mediaType: MediaType) {
-    let index = this.filters!.media_types.indexOf(mediaType);
-    if (index == -1) this.filters!.media_types.push(mediaType);
-    else this.filters!.media_types.splice(index, 1);
+    const result = await this.navigation.navigate(
+      key,
+      this.channelLoader.channels.length,
+      this.channelLoader.reachedMax,
+      this.filterService.areFiltersVisible(),
+      this.shortFiltersMode(),
+      this.currentWindowSize < 768,
+      this.filterService.getCurrentPage(),
+    );
 
-    // Sync boolean flags for UI
-    this.chkLiveStream = this.filters!.media_types.includes(MediaType.livestream);
-    this.chkMovie = this.filters!.media_types.includes(MediaType.movie);
-    this.chkSerie = this.filters!.media_types.includes(MediaType.serie);
-
-    // Default sorting for movies: newest first
-    if (this.chkMovie && !this.chkLiveStream && !this.chkSerie) {
-      this.filters!.sort = SortType.dateDescending;
-    } else {
-      // Revert to default sort if not strictly movies
-      const settings = this.memory.settings;
-      this.filters!.sort = settings.default_sort ?? SortType.provider;
+    if (result) {
+      await this.loadMore();
     }
 
-    // Debounce load() to avoid multiple rapid calls when toggling multiple types
-    if (this.mediaTypeDebounceTimer) {
-      clearTimeout(this.mediaTypeDebounceTimer);
-    }
-    this.mediaTypeDebounceTimer = setTimeout(() => {
-      this.load();
-      this.mediaTypeDebounceTimer = null;
-    }, 100);
+    return result;
   }
 
-  filtersVisible() {
-    return !this.filters?.series_id;
+  shortFiltersMode() {
+    return (
+      this.filterService.filters?.source_ids.findIndex((x) => this.memory.XtreamSourceIds.has(x)) ==
+      -1
+    );
   }
 
-  async switchMode(viewMode: ViewMode) {
-    if (viewMode == this.filters?.view_type) return;
-    this.filters!.series_id = undefined;
-    this.filters!.group_id = undefined;
-    this.filters!.view_type = viewMode;
-    this.filters!.season = undefined;
-    this.clearSearch();
-    this.nodeStack.clear();
-    await this.load();
-  }
-
-  searchFocused(): boolean {
-    return document.activeElement?.id == 'search';
-  }
-
-  focusSearch() {
-    if (this.header) {
-      this.header.focusSearch();
-    }
+  anyXtream() {
+    return (
+      Array.from(this.memory.Sources.values()).findIndex(
+        (x) => x.source_type == SourceType.Xtream,
+      ) != -1
+    );
   }
 
   async goBackHotkey() {
@@ -608,44 +493,39 @@ export class HomeComponent implements AfterViewInit, OnDestroy {
       return;
     } else if (this.memory.currentContextMenu?.menuOpen) {
       this.closeContextMenu();
-    } else if (this.searchFocused()) {
-      this.selectFirstChannel();
-    } else if (this.filters?.query) {
-      if (this.filters?.query) {
+    } else if (this.navigation.isSearchFocused()) {
+      this.navigation.selectFirstChannel();
+    } else if (this.filterService.filters?.query) {
+      if (this.filterService.filters?.query) {
         this.clearSearch();
         await this.load();
       }
-      this.selectFirstChannelDelayed(100);
-    } else if (this.nodeStack.hasNodes()) {
+      this.navigation.selectFirstChannelDelayed(100);
+    } else if (this.navigation.hasNodes()) {
       await this.goBack();
-      this.selectFirstChannelDelayed(100);
+      this.navigation.selectFirstChannelDelayed(100);
     } else {
-      this.selectFirstChannel();
+      this.navigation.selectFirstChannel();
     }
-  }
-
-  selectFirstChannelDelayed(milliseconds: number) {
-    setTimeout(() => this.selectFirstChannel(), milliseconds);
   }
 
   async goBack() {
-    var node = this.nodeStack.pop();
-    if (node.type == NodeType.Category) this.filters!.group_id = undefined;
+    const node = this.navigation.popNode();
+    if (node.type == NodeType.Category) this.filterService.setGroup(undefined);
     else if (node.type == NodeType.Series) {
-      this.filters!.series_id = undefined;
-      this.filters!.source_ids = Array.from(this.memory.Sources.keys());
+      this.filterService.setSeries(undefined, Array.from(this.memory.Sources.keys()));
     } else if (node.type == NodeType.Season) {
-      this.filters!.season = undefined;
+      this.filterService.setSeason(undefined);
     }
     if (node.query) {
-      this.filters!.query = node.query;
+      this.filterService.setQuery(node.query);
       // Restore the search input value via the header component
       if (this.header?.searchInput) {
         this.header.searchInput.nativeElement.value = node.query;
       }
     }
-    if (node.fromViewType && this.filters!.view_type !== node.fromViewType) {
-      this.filters!.view_type = node.fromViewType;
+    if (node.fromViewType && this.filterService.filters!.view_type !== node.fromViewType) {
+      this.filterService.switchViewMode(node.fromViewType);
     }
     await this.load();
   }
@@ -654,236 +534,20 @@ export class HomeComponent implements AfterViewInit, OnDestroy {
     this.router.navigateByUrl('settings');
   }
 
-  async nav(key: string) {
-    if (this.searchFocused()) return;
-    let lowSize = this.currentWindowSize < 768;
-    if (this.memory.currentContextMenu?.menuOpen || this.memory.ModalRef) {
-      return;
-    }
-    let tmpFocus = 0;
-    switch (key) {
-      case 'ArrowUp':
-        tmpFocus -= 3;
-        break;
-      case 'ArrowDown':
-        tmpFocus += 3;
-        break;
-      case 'ShiftTab':
-      case 'ArrowLeft':
-        tmpFocus -= 1;
-        break;
-      case 'Tab':
-      case 'ArrowRight':
-        tmpFocus += 1;
-        break;
-    }
-    let goOverSize = this.shortFiltersMode() ? 1 : 2;
-    if (lowSize && tmpFocus % 3 == 0 && this.focusArea == FocusArea.Tiles) tmpFocus = tmpFocus / 3;
-    tmpFocus += this.focus;
-    if (tmpFocus < 0) {
-      this.changeFocusArea(false);
-    } else if (tmpFocus > goOverSize && this.focusArea == FocusArea.Filters) {
-      this.changeFocusArea(true);
-    } else if (tmpFocus > 4 && this.focusArea == FocusArea.ViewMode) {
-      this.changeFocusArea(true);
-    } else if (
-      this.focusArea == FocusArea.Tiles &&
-      tmpFocus >= this.filters!.page * 36 &&
-      !this.reachedMax
-    )
-      await this.loadMore();
-    else {
-      if (tmpFocus >= this.channels.length && this.focusArea == FocusArea.Tiles)
-        tmpFocus = (this.channels.length == 0 ? 1 : this.channels.length) - 1;
-      this.focus = tmpFocus;
-      setTimeout(() => {
-        document.getElementById(`${FocusAreaPrefix[this.focusArea]}${this.focus}`)?.focus();
-      }, 0);
-    }
-  }
-
-  shortFiltersMode() {
-    return this.filters?.source_ids.findIndex((x) => this.memory.XtreamSourceIds.has(x)) == -1;
-  }
-
-  anyXtream() {
-    return (
-      Array.from(this.memory.Sources.values()).findIndex(
-        (x) => x.source_type == SourceType.Xtream,
-      ) != -1
-    );
-  }
-
-  changeFocusArea(down: boolean) {
-    let increment = down ? 1 : -1;
-    this.focusArea += increment;
-    if (this.focusArea == FocusArea.Filters && !this.filtersVisible()) this.focusArea += increment;
-    if (this.focusArea < 0) this.focusArea = 0;
-    this.applyFocusArea(down);
-  }
-
-  /**
-   * Toggles the multi-select mode.
-   * When enabled, clicking channels selects them instead of playing.
-   * When disabled, clears the current selection.
-   */
-  toggleSelectionMode() {
-    this.selectionMode = !this.selectionMode;
-    if (!this.selectionMode) {
-      this.clearSelection();
-    }
-  }
-
-  /**
-   * Toggles the selection state of a specific channel.
-   * @param id The ID of the channel to toggle.
-   */
-  toggleChannelSelection(id: number) {
-    if (this.selectedChannels.has(id)) {
-      this.selectedChannels.delete(id);
-    } else {
-      this.selectedChannels.add(id);
-    }
-  }
-
-  /**
-   * Clears all currently selected channels.
-   */
-  clearSelection() {
-    this.selectedChannels.clear();
-  }
-
-  /**
-   * Selects all channels currently visible in the view.
-   */
-  selectAllView() {
-    this.channels.forEach((c) => {
-      if (c.id !== undefined) {
-        this.selectedChannels.add(c.id);
-      }
-    });
-  }
-
-  /**
-   * Unhides selected channels and hides all other channels in the currently active sources.
-   * This effectively "whitelists" the selection.
-   */
-  async whitelistSelected() {
-    if (this.selectedChannels.size === 0) return;
-
-    try {
-      this.memory.Loading = true;
-      const selectedIds = Array.from(this.selectedChannels);
-      const sourceIds = this.filters?.source_ids || [];
-
-      if (sourceIds.length === 0) return;
-
-      // 1. Unhide all selected
-      const unhidePromises = selectedIds.map((id) =>
-        from(this.playlistService.hideChannel(id, false)),
-      );
-
-      // 2. Hide everything else in these sources
-      // We'll create a special filter for 'everything else'
-      const hideOthersFilter: Filters = {
-        ...this.filters!,
-        query: '', // All channels
-        view_type: ViewMode.All,
-        page: 1, // We'll handle this differently if we need more, but bulk_update usually handles query-based
-      };
-
-      // Note: The current bulk_update in Rust uses filters to identify targets.
-      // To hide 'everything else', we'd ideally want a "NOT IN (selectedIds)" filter.
-      // Since the backend doesn't have it, we'll hide ALL in the source, then UNHIDE the selected.
-
-      // Step A: Hide all in sources matching general filters (Live/Movie/Serie)
-      await this.playlistService.bulkUpdate(
-        { ...hideOthersFilter, query: undefined },
-        BulkActionType.Hide,
-      );
-
-      // Step B: Unhide selected (parallel)
-      await lastValueFrom(forkJoin(unhidePromises));
-
-      this.memory.Loading = false;
-      this.clearSelection();
-      this.toggleSelectionMode();
-      this.reload();
-    } catch (e) {
-      this.error.handleError(e);
-      this.memory.Loading = false;
-    }
-  }
-
   trackByChannelId(index: number, channel: Channel): any {
     return channel.id || index;
   }
 
-  /**
-   * Executes a bulk action (Hide, Unhide, Favorite, Unfavorite) on the currently selected channels.
-   * @param action The type of action to perform.
-   */
-  async bulkActionOnSelected(action: BulkActionType) {
-    if (this.selectedChannels.size === 0) return;
-
-    try {
-      this.memory.Loading = true;
-      const ids = Array.from(this.selectedChannels);
-
-      const promises = [];
-      for (const id of ids) {
-        if (action === BulkActionType.Hide) {
-          promises.push(from(this.playlistService.hideChannel(id, true)));
-        } else if (action === BulkActionType.Unhide) {
-          promises.push(from(this.playlistService.hideChannel(id, false)));
-        } else if (action === BulkActionType.Favorite) {
-          promises.push(from(this.playlistService.favoriteChannel(id)));
-        } else if (action === BulkActionType.Unfavorite) {
-          promises.push(from(this.playlistService.unfavoriteChannel(id)));
-        }
-      }
-
-      await lastValueFrom(forkJoin(promises));
-
-      this.toast.success(`Updated ${ids.length} channels`);
-      this.clearSelection();
-      this.reload();
-    } catch (e) {
-      this.error.handleError(e);
-    } finally {
-      this.memory.Loading = false;
-    }
-  }
-
-  applyFocusArea(down: boolean) {
-    this.focus = down
-      ? 0
-      : this.focusArea == FocusArea.Filters
-        ? this.shortFiltersMode()
-          ? 1
-          : 2
-        : 4;
-    let id = FocusAreaPrefix[this.focusArea] + this.focus;
-    document.getElementById(id)?.focus();
-  }
-
-  // Remove temporary ESC workaround - use proper keyboard shortcut handling
   @HostListener('document:keydown', ['$event'])
   onKeyDown(event: KeyboardEvent) {
     if (event.key == 'Tab' && !this.memory.ModalRef) {
       event.preventDefault();
       this.nav(event.shiftKey ? 'ShiftTab' : 'Tab');
     }
-    if (event.key == 'Enter' && this.focusArea == FocusArea.Filters) {
+    if (event.key == 'Enter' && this.navigation.focusArea == 1) {
       const activeElement = document.activeElement as HTMLElement | null;
       activeElement?.click();
     }
-  }
-
-  selectFirstChannel() {
-    this.focusArea = FocusArea.Tiles;
-    this.focus = 0;
-    (document.getElementById('first')?.firstChild as HTMLElement)?.focus();
   }
 
   closeContextMenu() {
@@ -897,18 +561,18 @@ export class HomeComponent implements AfterViewInit, OnDestroy {
   }
 
   async toggleKeywords() {
-    this.filters!.use_keywords = !this.filters!.use_keywords;
+    this.filterService.toggleKeywords();
     await this.load();
   }
 
   async bulkAction(action: BulkActionType) {
-    if (!this.filters) return;
-    if (this.filters.series_id && !this.filters.season) {
+    if (!this.filterService.filters) return;
+    if (this.filterService.filters.series_id && !this.filterService.filters.season) {
       return;
     }
     const actionName = BulkActionType[action].toLowerCase();
     try {
-      await this.playlistService.bulkUpdate(this.filters, action);
+      await this.playlistService.bulkUpdate(this.filterService.filters, action);
       await this.load();
       this.toast.success(`Successfully executed bulk update: ${actionName}`);
     } catch (e) {
@@ -918,48 +582,48 @@ export class HomeComponent implements AfterViewInit, OnDestroy {
 
   // New UI Methods
 
-  onFilterChipChanged(chip: FilterChip) {
+  async onFilterChipChanged(chip: FilterChip) {
     chip.active = !chip.active;
     if (chip.type === 'media') {
-      this.updateMediaTypes(chip.value);
-      // Sync legacy properties
-      if (chip.value === MediaType.livestream) this.chkLiveStream = chip.active;
-      if (chip.value === MediaType.movie) this.chkMovie = chip.active;
-      if (chip.value === MediaType.serie) this.chkSerie = chip.active;
+      this.filterService.toggleMediaType(chip.value);
+      await this.load();
     }
   }
 
+  async onMediaTypeToggled(mediaType: MediaType) {
+    this.filterService.toggleMediaType(mediaType);
+    await this.load();
+  }
+
   async toggleVods(state: boolean) {
-    this.chkMovie = state;
-    this.chkSerie = state;
-    if (this.filters) {
-      if (state) {
-        this.filters.media_types = Array.from(
-          new Set([...(this.filters.media_types || []), MediaType.movie, MediaType.serie]),
-        );
-      } else {
-        this.filters.media_types = this.filters.media_types?.filter(
+    if (state) {
+      this.filterService.setMediaTypes([
+        MediaType.movie,
+        MediaType.serie,
+        ...(this.filterService.filters?.media_types.filter(
           (t) => t !== MediaType.movie && t !== MediaType.serie,
-        );
-      }
-      await this.load();
+        ) || []),
+      ]);
+    } else {
+      this.filterService.setMediaTypes(
+        this.filterService.filters?.media_types.filter(
+          (t) => t !== MediaType.movie && t !== MediaType.serie,
+        ) || [],
+      );
     }
+    await this.load();
   }
 
   async updateGenre(value: string) {
     this.genreInput = value;
-    if (this.filters) {
-      this.filters.genre = value || undefined;
-      await this.load();
-    }
+    this.filterService.setGenre(value || undefined);
+    await this.load();
   }
 
   async updateRating(value: number) {
     this.minRating = value;
-    if (this.filters) {
-      this.filters.rating_min = value > 0 ? value : undefined;
-      await this.load();
-    }
+    this.filterService.setMinRating(value > 0 ? value : undefined);
+    await this.load();
   }
 
   async openDetails(channel: Channel) {
@@ -977,8 +641,7 @@ export class HomeComponent implements AfterViewInit, OnDestroy {
         }
       }
     } catch (e) {
-      console.error('Error fetching movie metadata:', e);
-      // Don't show error to user - just fall back to channel data
+      // Fall back to channel data if metadata fetch fails
     } finally {
       this.isLoadingDetails = false;
       this.isLoadingMetadata = false;
@@ -1019,10 +682,37 @@ export class HomeComponent implements AfterViewInit, OnDestroy {
   }
 
   bulkHide(hide: boolean) {
-    this.bulkActionOnSelected(hide ? BulkActionType.Hide : BulkActionType.Unhide);
+    this.selection.bulkAction(hide ? BulkActionType.Hide : BulkActionType.Unhide);
   }
 
   bulkFavorite(fav: boolean) {
-    this.bulkActionOnSelected(fav ? BulkActionType.Favorite : BulkActionType.Unfavorite);
+    this.selection.bulkAction(fav ? BulkActionType.Favorite : BulkActionType.Unfavorite);
+  }
+
+  scrollToTop() {
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
+  /**
+   * Get filter chips from the current filter state
+   * Transforms media types into FilterChip format for the UI
+   */
+  getFilterChips(): FilterChip[] {
+    const mediaTypes = this.filterService.filters?.media_types || [];
+    const mediaTypeLabels: Record<MediaType, string> = {
+      [MediaType.livestream]: 'Live TV',
+      [MediaType.movie]: 'Movies',
+      [MediaType.serie]: 'Series',
+      [MediaType.group]: 'Groups',
+      [MediaType.season]: 'Seasons',
+    };
+
+    return mediaTypes.map((type) => ({
+      id: `media-${type}`,
+      label: mediaTypeLabels[type] || MediaType[type],
+      active: true,
+      type: 'media' as const,
+      value: type,
+    }));
   }
 }

@@ -145,4 +145,12 @@ export class UiStateService {
   clearSeriesRefresh(seriesId: number): void {
     this._refreshedSeries.delete(seriesId);
   }
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // SOURCE STATE
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  xtreamSourceIds: Set<number> = new Set();
+  customSourceIds: Set<number> = new Set();
+  hasXtreamSources: boolean = false;
 }

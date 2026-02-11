@@ -18,13 +18,12 @@ export class Settings {
   refresh_interval?: number;
   last_refresh?: number;
   enhanced_video?: boolean;
-  theme?: number; // 0=Smooth Glass, 1=Matrix Terminal
+  theme?: number; // 0=Smooth Glass, 1=Matrix Terminal (Deprecated, locked to 0)
   vpn_mode?: boolean; // VPN mode for unstable connections
-  tmdb_api_key?: string; // TMDB API key for movie metadata
 
   /**
-    * Validates settings values
-    */
+   * Validates settings values
+   */
   static validate(settings: Partial<Settings>): string[] {
     const errors: string[] = [];
 
@@ -36,7 +35,10 @@ export class Settings {
       errors.push('Volume must be between 0 and 100');
     }
 
-    if (settings.restream_port !== undefined && (settings.restream_port < 1024 || settings.restream_port > 65535)) {
+    if (
+      settings.restream_port !== undefined &&
+      (settings.restream_port < 1024 || settings.restream_port > 65535)
+    ) {
       errors.push('Restream port must be between 1024 and 65535');
     }
 
@@ -56,7 +58,7 @@ export class Settings {
    */
   static sanitizeMpvParams(params?: string): string | undefined {
     if (!params) return undefined;
-    
+
     // Remove any potentially dangerous characters
     return params
       .trim()

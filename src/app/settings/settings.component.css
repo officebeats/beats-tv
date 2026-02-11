@@ -268,6 +268,27 @@ button:hover .history {
   border-color: var(--beats-red);
 }
 
+/* Toggle Visibility Improvements */
+.form-check-input {
+  background-color: #3a3a3a; /* Visible grey when off */
+  border-color: #666;
+}
+
+.form-check-input:checked {
+  background-color: var(--beats-blue, #0d6efd); /* Blue when on (Bootstrap default) or custom */
+  border-color: var(--beats-blue, #0d6efd);
+}
+
+.form-switch .form-check-input {
+  background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='-4 -4 8 8'%3e%3ccircle r='3' fill='rgba%28255, 255, 255, 0.75%29'/%3e%3c/svg%3e");
+}
+
+label,
+span {
+  color: #f0f0f0; /* Ensure text is bright enough */
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.8);
+}
+
 .sticky-top {
   border-bottom: 1px solid rgba(255, 255, 255, 0.05);
   margin-left: -1rem;
@@ -379,7 +400,36 @@ button:hover .history {
   border-radius: 4px;
 }
 
-.install-progress-bar-red {
-  background: var(--beats-red);
-  border-radius: 4px;
+/* Dropdown Option Fix */
+select option {
+  background-color: #222;
+  color: #fff;
+}
+
+/* Ensure selected option in dropdowns also has contrast */
+select:focus > option:checked {
+  background: #007fa3 !important;
+}
+
+/* Section Dividers */
+.section-divider {
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  padding-top: 1rem;
+  font-size: 0.95rem;
+  letter-spacing: 0.3px;
+}
+
+.form-control,
+.form-select {
+  background-color: rgba(255, 255, 255, 0.05); /* Glassy background */
+  color: #fff;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.form-control:focus,
+.form-select:focus {
+  background-color: rgba(255, 255, 255, 0.1);
+  color: #fff;
+  border-color: var(--beats-blue, #0d6efd);
+  box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25);
 }

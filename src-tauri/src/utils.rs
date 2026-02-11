@@ -28,6 +28,7 @@ use crate::{
     types::Source,
     xtream,
 };
+use ::log::{info, warn, error};
 use anyhow::{Context, Result};
 use chrono::{DateTime, Local, Utc};
 use directories::ProjectDirs;
@@ -68,34 +69,77 @@ static ILLEGAL_CHARS_REGEX: LazyLock<Regex> = LazyLock::new(|| {
 pub async fn refresh_source<R: tauri::Runtime>(app: &tauri::AppHandle<R>, source: Source) -> Result<()> {
     let id = source.id;
     let source_name = source.name.clone();
+    let _source_type_name = match source.source_type {
+        source_type::M3U => "M3U File",
+        source_type::M3U_LINK => "M3U URL",
+        source_type::XTREAM => "Xtream Codes",
+        source_type::CUSTOM => "Custom",
+        _ => "Unknown",
+    };
     
-    match source.source_type {
+    
+    let start_time = std::time::Instant::now();
+    
+    let result = match source.source_type {
         source_type::M3U => {
             let _ = app.emit("refresh-progress", serde_json::json!({
                 "playlist": source_name,
                 "activity": "Reading M3U file...",
                 "percent": 0
             }).to_string());
-            m3u::read_m3u8(source, true)?
+            m3u::read_m3u8(source.clone(), true)
         },
         source_type::M3U_LINK => {
             let _ = app.emit("refresh-progress", serde_json::json!({
                 "playlist": source_name,
-                "activity": "Downloading M3U link...",
+                "activity": "Downloading M3U playlist...",
                 "percent": 0
             }).to_string());
-            m3u::get_m3u8_from_link(source, true).await?
+            m3u::get_m3u8_from_link(source.clone(), true).await
         },
         source_type::XTREAM => {
-            xtream::get_xtream(app, source, true).await?
+            let _ = app.emit("refresh-progress", serde_json::json!({
+                "playlist": source_name,
+                "activity": "Connecting to Xtream server...",
+                "percent": 0
+            }).to_string());
+            xtream::get_xtream(app, source.clone(), true).await
         },
-        source_type::CUSTOM => {}
-        _ => return Err(anyhow::anyhow!("invalid source_type")),
+        source_type::CUSTOM => {
+            Ok(())
+        }
+        _ => {
+            Err(anyhow::anyhow!("Invalid source type: {}", source.source_type))
+        }
+    };
+
+    let elapsed = start_time.elapsed();
+
+    match &result {
+        Ok(_) => {
+            if let Some(id) = id {
+                if let Err(e) = sql::update_source_last_updated(id) {
+                    error!("[Backend] [{}] Warning: Failed to update last_updated: {:?}", source_name, e);
+                }
+            }
+            let _ = app.emit("refresh-progress", serde_json::json!({
+                "playlist": source_name,
+                "activity": format!("Refresh complete! ({:.1}s)", elapsed.as_secs_f32()),
+                "percent": 100
+            }).to_string());
+        }
+        Err(e) => {
+            error!("[Backend] [{}] ✗ Refresh FAILED after {:.2}s: {:?}", source_name, elapsed.as_secs_f32(), e);
+            let _ = app.emit("refresh-progress", serde_json::json!({
+                "playlist": source_name,
+                "activity": format!("Failed: {}", e),
+                "percent": 0,
+                "error": e.to_string()
+            }).to_string());
+        }
     }
-    if let Some(id) = id {
-        sql::update_source_last_updated(id)?;
-    }
-    Ok(())
+    
+    result
 }
 
 #[cfg(target_os = "windows")]
@@ -131,16 +175,66 @@ pub async fn download_file(app: AppHandle, display_name: &str, url: &str, dest: 
 }
 
 pub async fn refresh_all<R: tauri::Runtime>(app: &tauri::AppHandle<R>) -> Result<()> {
+    info!("[Backend] REFRESH ALL PLAYLISTS - STARTING");
+    
+    let start_time = std::time::Instant::now();
+    
     // Notify frontend start
     let _ = app.emit("refresh-start", ());
     
     let sources = sql::get_sources()?;
-    for source in sources {
-        refresh_source(app, source).await?;
+    let total = sources.len();
+    
+    if total == 0 {
+        info!("[Backend] No sources configured. Nothing to refresh.");
+        let _ = app.emit("refresh-end", ());
+        return Ok(());
+    }
+    
+    info!("[Backend] Found {} source(s) to refresh", total);
+    
+    let mut success_count = 0;
+    let mut fail_count = 0;
+    let mut errors: Vec<String> = Vec::new();
+    
+    for (index, source) in sources.into_iter().enumerate() {
+        let source_name = source.name.clone();
+        // Removed verbose "Processing" print
+        
+        match refresh_source(app, source).await {
+            Ok(_) => {
+                success_count += 1;
+            }
+            Err(e) => {
+                fail_count += 1;
+                let error_msg = format!("{}: {}", source_name, e);
+                errors.push(error_msg.clone());
+                error!("[Backend] [{}/{}] FAILED: {}", index + 1, total, error_msg);
+                // Continue with next source instead of aborting
+            }
+        }
+    }
+    
+    let elapsed = start_time.elapsed();
+    
+    info!("[Backend] REFRESH ALL COMPLETE. Duration: {:.2}s. Success: {}/{}. Failed: {}/{}", 
+        elapsed.as_secs_f32(), success_count, total, fail_count, total);
+
+    if !errors.is_empty() {
+        error!("[Backend] Errors occurred during refresh:");
+        for err in &errors {
+            error!("[Backend]   - {}", err);
+        }
     }
     
     // Notify frontend end
     let _ = app.emit("refresh-end", ());
+    
+    // Return error only if ALL sources failed
+    if fail_count == total && total > 0 {
+        return Err(anyhow::anyhow!("All {} sources failed to refresh: {}", total, errors.join("; ")));
+    }
+    
     Ok(())
 }
 
@@ -342,25 +436,58 @@ fn get_download_path(file_name: String) -> Result<String> {
     Ok(path.to_string_lossy().to_string())
 }
 pub fn get_bin(bin: &str) -> String {
+    #[cfg(target_os = "macos")]
+    {
+        return find_macos_bin(bin);
+    }
+    
+    #[cfg(not(target_os = "macos"))]
+    {
+        if OS != "linux" {
+            let local_bin = get_bin_from_deps(bin);
+            if Path::new(&local_bin).exists() {
+                return local_bin;
+            }
+        }
+    }
+
     if OS == "linux" || which(bin).is_ok() {
         return bin.to_string();
     }
-    #[cfg(target_os = "macos")]
-    return find_macos_bin(bin);
     
     #[cfg(not(target_os = "macos"))]
     return get_bin_from_deps(bin);
+    
+    #[cfg(target_os = "macos")]
+    return bin.to_string(); // Fallback for macos if not found
 }
 
 #[cfg(not(target_os = "macos"))]
 fn get_bin_from_deps(bin: &str) -> String {
-    let mut path = current_exe().unwrap_or_else(|_| {
-        eprintln!("Failed to get current executable path, using fallback");
-        PathBuf::from(".")
-    });
+    let mut path = current_exe().unwrap_or_else(|_| PathBuf::from("."));
     path.pop();
     path.push("deps");
     path.push(bin);
+    
+    if path.exists() {
+        // Reduced verbosity
+    } else {
+        warn!("[Backend] Binary NOT found at: {:?}", path);
+        // Fallback for dev mode: check src-tauri/deps
+        let mut dev_path = current_exe().unwrap_or_else(|_| PathBuf::from("."));
+        dev_path.pop();
+        dev_path.pop();
+        dev_path.pop();
+        dev_path.push("deps");
+        dev_path.push(bin);
+        if dev_path.exists() {
+            // Found in dev fallback
+            return dev_path.to_string_lossy().to_string();
+        } else {
+            warn!("[Backend] Binary NOT found in dev-fallback: {:?}", dev_path);
+        }
+    }
+
     return path.to_string_lossy().to_string();
 }
 

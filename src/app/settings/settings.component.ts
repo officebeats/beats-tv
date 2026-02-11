@@ -57,11 +57,6 @@ export class SettingsComponent {
   viewModeEnum = ViewMode;
   sources: Source[] = [];
   sortTypes = SORT_TYPES;
-  themeOptions = [
-    { value: 0, label: 'Smooth Glass' },
-    { value: 1, label: 'Matrix Terminal' },
-  ];
-
   mpvPresets = [
     { value: 'custom', label: 'Custom (Manual)' },
     { value: 'default', label: 'Default (Clean)' },
@@ -131,7 +126,7 @@ export class SettingsComponent {
         this.settings = { ...this.settings, ...x };
       }
 
-      // Ensure defaults are set (in case backend sent partial object with missing keys)
+      // Ensure defaults are set
       if (this.settings.use_stream_caching == undefined) this.settings.use_stream_caching = true;
       if (this.settings.default_view == undefined) this.settings.default_view = ViewMode.All;
       if (this.settings.volume == undefined) this.settings.volume = 100;
@@ -145,14 +140,16 @@ export class SettingsComponent {
       if (this.settings.max_text_lines == undefined) this.settings.max_text_lines = 2;
       if (this.settings.compact_mode == undefined) this.settings.compact_mode = false;
       if (this.settings.refresh_interval == undefined) this.settings.refresh_interval = 0;
-      if (this.settings.theme == undefined) this.settings.theme = 0;
+
+      // Force Smooth Glass theme
+      this.settings.theme = 0;
 
       // Auto-detect preset
       if (!this.settings.mpv_params || this.settings.mpv_params.trim() === '') {
         this.selectedPreset = 'performance';
         this.applyPreset();
       } else {
-        // Try to match stable or enhanced
+        // Try to match known presets, otherwise keep 'custom'
         Promise.all([
           this.tauri.call('get_mpv_preset', { preset: 'stable' }),
           this.tauri.call('get_mpv_preset', { preset: 'enhanced' }),
@@ -165,7 +162,6 @@ export class SettingsComponent {
           } else if (this.settings.mpv_params === performance) {
             this.selectedPreset = 'performance';
           } else {
-            // Default to custom if we can't match known presets
             this.selectedPreset = 'custom';
           }
         });
@@ -181,11 +177,6 @@ export class SettingsComponent {
     if (themeId >= 0 && themeId < themeClasses.length) {
       document.body.classList.add(themeClasses[themeId]);
     }
-  }
-
-  onThemeChange() {
-    this.applyTheme(this.settings.theme ?? 0);
-    this.updateSettings();
   }
 
   refreshIntervals = [
@@ -256,7 +247,7 @@ export class SettingsComponent {
         try {
           await this.tauri.call('refresh_source', { source: source });
         } catch (e) {
-          console.error(`Failed to refresh source ${source.name}:`, e);
+          // Individual source failure - continue with remaining sources
         }
       }
       this.toastr.success('Successfully updated all sources');

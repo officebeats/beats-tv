@@ -40,6 +40,7 @@ use tokio::{
 };
 use tokio_util::sync::CancellationToken;
 
+
 const ARG_SAVE_POSITION_ON_QUIT: &str = "--save-position-on-quit";
 const ARG_CACHE: &str = "--cache=";
 const ARG_NO: &str = "no";
@@ -57,7 +58,14 @@ const ARG_HWDEC: &str = "--hwdec=auto";
 const ARG_GPU_NEXT: &str = "--vo=gpu-next";
 
 const ARG_NO_RESUME_PLAYBACK: &str = "--no-resume-playback";
+#[cfg(target_os = "windows")]
+const MPV_BIN_NAME: &str = "mpv.exe";
+#[cfg(not(target_os = "windows"))]
 const MPV_BIN_NAME: &str = "mpv";
+
+#[cfg(target_os = "windows")]
+const YTDLP_BIN_NAME: &str = "yt-dlp.exe";
+#[cfg(not(target_os = "windows"))]
 const YTDLP_BIN_NAME: &str = "yt-dlp";
 const HTTP_ORIGIN: &str = "origin:";
 const HTTP_REFERRER: &str = "referer:";
@@ -73,20 +81,15 @@ pub async fn play(
     record_path: Option<String>,
     state: State<'_, Mutex<AppState>>,
 ) -> Result<()> {
-    eprintln!(
-        "{} playing",
-        channel.url.as_ref().context("no channel url")?
-    );
     let source = channel
         .source_id
         .and_then(|id| {
             sql::get_source_from_id(id)
                 .with_context(|| format!("failed to fetch source with id {}", id))
                 .ok()
-        })
-        .or(None);
+        });
+
     let args = get_play_args(&channel, record, record_path, &source)?;
-    eprintln!("with args: {:?}", args);
 
     if let Some(source) = source.as_ref() {
         _ = crate::utils::handle_max_streams(source, &state)
@@ -94,18 +97,48 @@ pub async fn play(
             .map_err(|e| log::log(format!("{:?}", e)));
     }
 
-    let mut cmd = Command::new(MPV_PATH.clone());
-    cmd.args(args)
+    let mut cmd_builder = Command::new(MPV_PATH.clone());
+    cmd_builder.args(args.clone())
         .stdout(Stdio::piped())
+        .stderr(Stdio::piped())
         .kill_on_drop(true);
 
     #[cfg(target_os = "windows")]
-    // 0x08000000 is the CREATE_NO_WINDOW flag.
-    // This is required to prevent MPV from opening a blank console window on Windows.
-    // See: https://learn.microsoft.com/en-us/windows/win32/procthread/process-creation-flags
-    cmd.creation_flags(0x08000000);
+    {
+        // 0x08000000 is CREATE_NO_WINDOW
+        cmd_builder.creation_flags(0x08000000);
+    }
 
-    let mut cmd = cmd.spawn()?;
+    let mut cmd = match cmd_builder.spawn() {
+        Ok(child) => child,
+        Err(e) => {
+            return Err(anyhow::anyhow!("Failed to spawn MPV ({}): {:?}", MPV_PATH.clone(), e));
+        }
+    };
+
+    let stdout = cmd.stdout.take().context("no stdout")?;
+    let stderr = cmd.stderr.take().context("no stderr")?;
+    
+    let stdout_handle = tokio::spawn(async move {
+        let mut reader = BufReader::new(stdout).lines();
+        let mut full_output = String::new();
+        while let Ok(Some(line)) = reader.next_line().await {
+            full_output.push_str(&line);
+            full_output.push('\n');
+        }
+        full_output
+    });
+
+    let stderr_handle = tokio::spawn(async move {
+        let mut reader = BufReader::new(stderr).lines();
+        let mut full_output = String::new();
+        while let Ok(Some(line)) = reader.next_line().await {
+            full_output.push_str(&line);
+            full_output.push('\n');
+        }
+        full_output
+    });
+
     let token = CancellationToken::new();
     let channel_id = channel.id.context("no channel id")?;
     if let Some(source_id) = source.as_ref().and_then(|s| s.id) {
@@ -121,31 +154,13 @@ pub async fn play(
     let result: Result<()> = tokio::select! {
         status = cmd.wait() => {
             let status = status?;
+            let _out = stdout_handle.await.unwrap_or_default();
+            let err = stderr_handle.await.unwrap_or_default();
+
             if status.success() {
                 Ok(())
             } else {
-                let stdout = cmd.stdout.take();
-                if stdout.is_none() {
-                     Ok(())
-                } else {
-                    let stdout = stdout.context("no stdout")?;
-                    let mut error: String = String::new();
-                    let mut lines = BufReader::new(stdout).lines();
-                    let mut first = true;
-                    while let Some(line) = lines.next_line().await? {
-                        error += &line;
-                        if !first {
-                            error += "\n";
-                        } else {
-                            first = false;
-                        }
-                    }
-                    if error != "" {
-                        Err(anyhow::anyhow!(error))
-                    } else {
-                        Err(anyhow::anyhow!("Mpv encountered an unknown error"))
-                    }
-                }
+                Err(anyhow::anyhow!("MPV Error: {}", err))
             }
         },
         _ = token.cancelled() => {
@@ -231,15 +246,11 @@ fn get_play_args(
         set_headers(headers, &mut args, source);
     }
     if let Some(mpv_params) = settings.mpv_params {
-        eprintln!("Raw User MPV Params: {}", mpv_params);
-        
         #[cfg(not(target_os = "windows"))]
         let mut params = shell_words::split(&mpv_params)?;
         
         #[cfg(target_os = "windows")]
         let mut params = winsplit::split(&mpv_params);
-
-        eprintln!("Params before filter: {:?}", params);
         
         // Filter out options known to cause fatal parser errors (commas in lavf-o-add) 
         // or compatibility issues in different MPV/FFmpeg versions.
@@ -252,12 +263,10 @@ fn get_play_args(
                              arg.contains("reconnect-on-http-error") ||
                              arg.contains("reconnect-delay-max");
             if problematic {
-                eprintln!("Filtering out incompatible/legacy arg to prevent crash: {}", arg);
+                log::log(format!("Filtering out incompatible/legacy arg to prevent crash: {}", arg));
             }
             !problematic
         });
-        
-        eprintln!("Params after filter: {:?}", params);
         args.append(&mut params);
     }
     Ok(args)

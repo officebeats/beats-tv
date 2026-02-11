@@ -3,22 +3,18 @@
   placement="top"
   tabindex="0"
   (keyup.enter)="click()"
-  [ngClass]="{
-    playing: starting,
-    faded: fade,
-    'three-lines': threeLines,
-    compact: compact,
-    selected: selected,
-  }"
+  [class.playing]="starting"
+  [class.faded]="fade"
+  [class.three-lines]="threeLines"
+  [class.compact]="compact"
+  [class.selected]="selected"
   [ngbTooltip]="channel?.name"
   triggers="hover"
   (click)="click()"
   class="channel"
   (contextmenu)="onRightClick($event)"
 >
-  <!-- New Structure: Horizontal Row -->
-
-  <!-- 2. Content Row -->
+  <!-- Content Row -->
   <div class="channel-content-row">
     <!-- Logo -->
     <div class="image-container">
@@ -40,7 +36,7 @@
       <div class="channel-header">
         <div class="channel-title" [title]="channel?.name">{{ channel?.name }}</div>
 
-        <!-- Meta / Badges (Right Aligned in Header or separate row) -->
+        <!-- Meta / Badges -->
         <div class="channel-badges">
           <span class="badge-live" *ngIf="channel?.media_type === mediaTypeEnum.livestream"
             >LIVE</span
@@ -52,11 +48,9 @@
           <!-- Rating Badge -->
           <span
             class="badge-rating"
-            [ngClass]="{
-              'rating-high': (channel?.rating ?? 0) >= 7,
-              'rating-medium': (channel?.rating ?? 0) >= 5 && (channel?.rating ?? 0) < 7,
-              'rating-low': (channel?.rating ?? 0) < 5,
-            }"
+            [class.rating-high]="(channel?.rating ?? 0) >= 7"
+            [class.rating-medium]="(channel?.rating ?? 0) >= 5 && (channel?.rating ?? 0) < 7"
+            [class.rating-low]="(channel?.rating ?? 0) < 5"
             *ngIf="channel?.rating && (channel?.rating ?? 0) > 0"
           >
             {{ channel?.rating | number: "1.0-1" }}
@@ -72,7 +66,7 @@
         </div>
       </div>
 
-      <!-- Aesthetic Progress Bar -->
+      <!-- Progress Bar -->
       <div class="progress-container">
         <div class="progress-bar"></div>
       </div>
@@ -81,19 +75,18 @@
 
   <!-- Actions Overlay (Hover) -->
   <div class="channel-actions">
-    <svg *ngIf="channel?.favorite" viewBox="0 0 24 24" class="action-icon fav-active">
-      <path
-        fill="currentColor"
-        d="M12,17.27L18.18,21L16.54,13.97L22,9.24L14.81,8.62L12,2L9.19,8.62L2,9.24L7.45,13.97L5.82,21L12,17.27Z"
-      />
-    </svg>
+    <app-icon
+      *ngIf="channel?.favorite"
+      name="star"
+      size="md"
+      class="action-icon fav-active"
+      aria-hidden="true"
+    ></app-icon>
   </div>
 
   <!-- Selection Check -->
   <div class="selection-indicator" *ngIf="selectionMode && selected">
-    <svg viewBox="0 0 24 24" fill="currentColor">
-      <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z" />
-    </svg>
+    <app-icon name="check" size="md" aria-hidden="true"></app-icon>
   </div>
 </div>
 

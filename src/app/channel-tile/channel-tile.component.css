@@ -6,7 +6,7 @@
 .channel {
   position: relative;
   width: 100%;
-  height: 72px;
+  height: 54px; /* Reduced height for density */
   display: flex;
   align-items: center;
   /* Dark Glass Mode */
@@ -14,9 +14,9 @@
   -webkit-backdrop-filter: blur(16px) saturate(180%);
   backdrop-filter: blur(16px) saturate(180%);
   border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 12px;
-  padding: 0 12px;
-  gap: 12px;
+  border-radius: 8px; /* Slightly tighter radius */
+  padding: 0 8px; /* Tighter horizontal padding */
+  gap: 8px; /* Tighter gap */
   transition: all 0.2s cubic-bezier(0.25, 0.46, 0.45, 0.94);
   cursor: pointer;
   box-shadow:
@@ -29,9 +29,9 @@
 
 .channel.three-lines {
   height: auto;
-  min-height: 88px;
-  padding-top: 10px;
-  padding-bottom: 10px;
+  min-height: 64px; /* Reduced min height */
+  padding-top: 6px;
+  padding-bottom: 6px;
 }
 
 .channel:hover {
@@ -57,16 +57,16 @@
 
 /* 1. Index Box */
 .channel-index-box {
-  width: 36px;
-  height: 36px;
+  width: 28px; /* Reduced size */
+  height: 28px;
   flex-shrink: 0;
   display: flex;
   align-items: center;
   justify-content: center;
   background: rgba(0, 0, 0, 0.3); /* Darker inlay */
-  border-radius: 8px;
+  border-radius: 6px;
   color: #00e5ff; /* Cyan/Glass Blue Index */
-  font-size: 0.85rem;
+  font-size: 0.75rem; /* Smaller font */
   font-weight: 700;
   font-family: "Roboto Mono", monospace;
   text-shadow: 0 0 8px rgba(0, 229, 255, 0.4);
@@ -78,15 +78,15 @@
   align-items: center;
   flex: 1;
   min-width: 0;
-  gap: 16px;
+  gap: 10px; /* Reduced gap */
   height: 100%;
 }
 
 /* Logo Container */
 .image-container {
-  width: 48px;
-  height: 48px;
-  border-radius: 8px;
+  width: 38px; /* Reduced size */
+  height: 38px;
+  border-radius: 6px;
   overflow: hidden;
   background: rgba(0, 0, 0, 0.5); /* Explicit dark background */
   border: 1px solid rgba(255, 255, 255, 0.05); /* Soft border */
@@ -114,7 +114,7 @@
 }
 
 .placeholder-text {
-  font-size: 1.2rem;
+  font-size: 1rem; /* Smaller placeholder text */
   font-weight: 700;
   color: rgba(0, 229, 255, 0.6);
   text-transform: uppercase;
@@ -128,7 +128,7 @@
   flex-direction: column;
   justify-content: center;
   min-width: 0;
-  gap: 4px;
+  gap: 2px; /* Tighter gap */
 }
 
 .channel-header {
@@ -136,17 +136,17 @@
   align-items: center;
   justify-content: space-between;
   width: 100%;
-  gap: 10px;
+  gap: 8px;
 }
 
 .channel-title {
-  font-size: 1rem;
-  font-weight: 700;
+  font-size: 0.95rem; /* Slightly smaller font */
+  font-weight: 600;
   color: #e0f7fa; /* White-Cyan tint */
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  letter-spacing: 0.3px;
+  letter-spacing: 0.2px;
   text-shadow: 0 0 5px rgba(0, 229, 255, 0.3); /* Subtle glow */
   display: block;
 }
@@ -154,29 +154,29 @@
 .three-lines .channel-title {
   white-space: normal;
   display: -webkit-box;
-  -webkit-line-clamp: 3;
-  line-clamp: 3;
+  -webkit-line-clamp: 2; /* Limit to 2 lines usually sufficient for density */
+  line-clamp: 2;
   -webkit-box-orient: vertical;
-  line-height: 1.35;
-  max-height: 4.1em; /* approx 3 lines */
+  line-height: 1.25;
+  max-height: 2.5em;
 }
 
 .channel-badges {
   flex-shrink: 0;
   display: flex;
-  gap: 6px;
+  gap: 4px;
 }
 
 /* Badges - Light Theme */
 .badge-live,
 .badge-vod,
 .badge-series {
-  font-size: 0.65rem;
+  font-size: 0.6rem; /* Smaller font */
   font-weight: 700;
-  padding: 3px 8px;
-  border-radius: 6px;
+  padding: 2px 6px; /* Tighter padding */
+  border-radius: 4px;
   text-transform: uppercase;
-  letter-spacing: 0.5px;
+  letter-spacing: 0.3px;
 }
 
 .badge-live {
@@ -205,10 +205,12 @@
   font-weight: 700;
   display: inline-flex;
   align-items: center;
-  gap: 3px;
+  gap: 2px;
   background: rgba(255, 255, 255, 0.05);
   border: 1px solid rgba(255, 255, 255, 0.1);
   color: #e0f7fa;
+  font-size: 0.6rem;
+  padding: 2px 5px;
 }
 
 .rating-high {
@@ -235,9 +237,9 @@
   color: #00e5ff; /* Cyan Text */
   border: 1px solid rgba(0, 229, 255, 0.3);
   font-weight: 700;
-  padding: 3px 8px;
-  border-radius: 6px;
-  font-size: 0.75rem; /* Ensure legible size */
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-size: 0.65rem; /* Legible but smaller */
 }
 
 /* Aesthetic Progress Bar */

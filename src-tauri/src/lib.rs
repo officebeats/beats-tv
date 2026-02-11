@@ -76,7 +76,7 @@ pub fn run() {
                 let _ = window.show();
                 let _ = window.set_focus();
             } else {
-                eprintln!("Main window not found during single instance check");
+                log::log("Main window not found during single instance check".to_string());
             }
         }))
         .plugin(tauri_plugin_notification::init())
@@ -695,7 +695,7 @@ async fn get_mpv_preset(preset: String) -> Result<String, String> {
         "stable" => Ok(crate::mpv::get_stable_params()),
         "enhanced" => Ok(crate::mpv::get_enhanced_params()),
         "performance" => Ok(crate::mpv::get_performance_params()),
-        _ => Ok(crate::mpv::get_stable_params()), // Default to stable
+        _ => Ok(crate::mpv::get_performance_params()), // Default to performance+
     }
 }
 
@@ -712,3 +712,5 @@ async fn omdb_search_and_cache(title: String, year: Option<i32>) -> Result<Optio
         .await
         .map_err(|e| format!("{:?}", e))
 }
+
+

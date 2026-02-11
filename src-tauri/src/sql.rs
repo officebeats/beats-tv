@@ -83,7 +83,8 @@ fn get_and_create_sqlite_db_path() -> Result<String> {
         std::fs::create_dir_all(&path).context("Failed to create data directory")?;
     }
     path.push(DB_NAME);
-    Ok(path.to_string_lossy().to_string())
+    let path_str = path.to_string_lossy().to_string();
+    Ok(path_str)
 }
 
 fn create_structure() -> Result<()> {
@@ -641,13 +642,20 @@ pub fn search(filters: Filters) -> Result<Vec<Channel>> {
     if filters.series_id.is_some() && filters.season.is_none() {
         return search_series(filters);
     }
-    let sql = get_conn()?;
-    let offset: u16 = filters.page as u16 * PAGE_SIZE as u16 - PAGE_SIZE as u16;
+
     let media_types = match filters.series_id.is_some() {
-        true => vec![1],
+        true => vec![2], // Series/Episode
         false => filters.media_types.clone().unwrap_or_default(),
     };
-    let query = filters.query.unwrap_or("".to_string());
+    
+    if filters.source_ids.is_empty() || media_types.is_empty() {
+        return Ok(vec![]);
+    }
+
+    let sql = get_conn()?;
+    let offset: u16 = filters.page as u16 * PAGE_SIZE as u16 - PAGE_SIZE as u16;
+    
+    let query = filters.query.as_ref().cloned().unwrap_or_default();
     let keywords: Vec<String> = match filters.use_keywords {
         true => query
             .split(" ")
@@ -655,13 +663,14 @@ pub fn search(filters: Filters) -> Result<Vec<Channel>> {
             .collect(),
         false => vec![format!("%{query}%")],
     };
+
     let mut sql_query = format!(
         r#"
         SELECT * FROM CHANNELS
         WHERE ({})
         AND media_type IN ({})
         AND source_id IN ({})
-        AND url IS NOT NULL"#,
+        AND (url IS NOT NULL OR stream_id IS NOT NULL)"#,
         get_keywords_sql(keywords.len()),
         generate_placeholders(media_types.len()),
         generate_placeholders(filters.source_ids.len()),
@@ -758,7 +767,7 @@ pub fn search(filters: Filters) -> Result<Vec<Channel>> {
 fn search_series(filters: Filters) -> Result<Vec<Channel>> {
     let sql = get_conn()?;
     let offset: u16 = filters.page as u16 * PAGE_SIZE as u16 - PAGE_SIZE as u16;
-    let query = filters.query.unwrap_or("".to_string());
+    let query = filters.query.as_deref().unwrap_or("");
     let keywords: Vec<String> = match filters.use_keywords {
         true => query
             .split(" ")

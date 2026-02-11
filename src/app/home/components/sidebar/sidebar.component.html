@@ -13,93 +13,20 @@
     </div>
   </div>
 
-  <nav class="sidebar-nav">
+  <nav class="sidebar-nav" aria-label="Main navigation">
     <div class="nav-section">
-      <!-- "Navigation" label removed -->
       <button
-        (click)="switchMode(viewModeEnum.All)"
+        *ngFor="let item of navItems"
+        (click)="switchMode(item.id)"
         class="nav-item"
-        [class.active]="currentViewType === viewModeEnum.All"
+        [class.active]="currentViewType === item.id"
+        [attr.aria-label]="item.ariaLabel"
+        [attr.aria-current]="currentViewType === item.id ? 'page' : null"
       >
         <span class="nav-icon">
-          <svg
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            stroke-width="2"
-            stroke-linecap="round"
-            stroke-linejoin="round"
-          >
-            <path
-              d="M3 9.5L12 3L21 9.5V19C21 20.1046 20.1046 21 19 21H5C3.89543 21 3 20.1046 3 19V9.5Z"
-            />
-            <path d="M9 21V12H15V21" />
-          </svg>
+          <app-icon [name]="item.icon" size="md" aria-hidden="true"></app-icon>
         </span>
-        <span>All</span>
-      </button>
-      <button
-        (click)="switchMode(viewModeEnum.Categories)"
-        class="nav-item"
-        [class.active]="currentViewType === viewModeEnum.Categories"
-      >
-        <span class="nav-icon">
-          <svg
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            stroke-width="2"
-            stroke-linecap="round"
-            stroke-linejoin="round"
-          >
-            <rect x="3" y="3" width="7.5" height="7.5" rx="1.5" />
-            <rect x="13.5" y="3" width="7.5" height="7.5" rx="1.5" />
-            <rect x="13.5" y="13.5" width="7.5" height="7.5" rx="1.5" />
-            <rect x="3" y="13.5" width="7.5" height="7.5" rx="1.5" />
-          </svg>
-        </span>
-        <span>Categories</span>
-      </button>
-      <button
-        (click)="switchMode(viewModeEnum.Favorites)"
-        class="nav-item"
-        [class.active]="currentViewType === viewModeEnum.Favorites"
-      >
-        <span class="nav-icon">
-          <svg
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            stroke-width="2"
-            stroke-linecap="round"
-            stroke-linejoin="round"
-          >
-            <path
-              d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"
-            />
-          </svg>
-        </span>
-        <span>Favorites</span>
-      </button>
-      <button
-        (click)="switchMode(viewModeEnum.History)"
-        class="nav-item"
-        [class.active]="currentViewType === viewModeEnum.History"
-      >
-        <span class="nav-icon">
-          <svg
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            stroke-width="2"
-            stroke-linecap="round"
-            stroke-linejoin="round"
-          >
-            <circle cx="12" cy="12" r="10" />
-            <path d="M12 6V12L16 14.5" />
-          </svg>
-        </span>
-        <span>History</span>
+        <span>{{ item.label }}</span>
       </button>
     </div>
 

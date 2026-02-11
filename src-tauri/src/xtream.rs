@@ -141,20 +141,30 @@ struct XtreamEPGItem {
 }
 
 fn build_xtream_url(source: &mut Source) -> Result<Url> {
-    let url_str = source.url.as_ref().context("Missing URL")?;
+    let url_input = source.url.as_ref().context("Missing URL")?;
     let username = source.username.as_ref().context("Missing username")?;
     let password = source.password.as_ref().context("Missing password")?;
     
     source.url_origin = Some(
-        Url::from_str(url_str)?
+        Url::from_str(url_input)?
             .origin()
             .ascii_serialization(),
     );
     
-    let mut url = Url::parse(url_str)?;
+    let mut url_str = url_input.clone();
+    // Intelligent Xtream URL correction
+    if !url_str.contains(".php") {
+        if !url_str.ends_with('/') {
+            url_str.push('/');
+        }
+        url_str.push_str("player_api.php");
+    }
+    
+    let mut url = Url::parse(&url_str)?;
     url.query_pairs_mut()
         .append_pair("username", username)
         .append_pair("password", password);
+        
     Ok(url)
 }
 
@@ -179,6 +189,7 @@ pub async fn get_xtream<R: tauri::Runtime>(app: &tauri::AppHandle<R>, mut source
     let live_count = live.as_ref().map(|v| v.len()).unwrap_or(0);
     let vods_count = vods.as_ref().map(|v| v.len()).unwrap_or(0);
     let series_count = series.as_ref().map(|v| v.len()).unwrap_or(0);
+    
     let grand_total = live_count + vods_count + series_count;
 
     let _ = app.emit("refresh-progress", serde_json::json!({
@@ -210,58 +221,88 @@ pub async fn get_xtream<R: tauri::Runtime>(app: &tauri::AppHandle<R>, mut source
 
     let mut current_offset = 0;
     
-    let _ = app.emit("refresh-progress", serde_json::json!({
-        "playlist": source_name,
-        "activity": "Saving Live TV...",
-        "percent": 0
-    }).to_string());
-    live.and_then(|live| process_xtream(app, &source_name, "Live TV", &tx, live, live_cats?, &source, media_type::LIVESTREAM, current_offset, grand_total))
-        .unwrap_or_else(|e| {
-            let error_string = e.to_string();
-            let context = format!("{:?}", e.context("Failed to process live"));
-            log::log(context);
-            last_error = error_string;
-            fail_count += 1;
+    // --- LIVE TV ---
+    if let Ok(streams) = live {
+        let cats = live_cats.unwrap_or_else(|_e| {
+            // Log warning internally if needed, or just proceed with empty cats
+            Vec::new()
         });
-
-    current_offset += live_count;
-    let _ = app.emit("refresh-progress", serde_json::json!({
-        "playlist": source_name,
-        "activity": "Saving Movies...",
-        "percent": (current_offset as f32 / grand_total as f32 * 100.0) as u32
-    }).to_string());
-    vods.and_then(|vods: Vec<XtreamStream>| {
-        process_xtream(app, &source_name, "Movies", &tx, vods, vods_cats?, &source, media_type::MOVIE, current_offset, grand_total)
-    })
-    .unwrap_or_else(|e| {
-        let error_string = e.to_string();
-        let context = format!("{:?}", e.context("Failed to process vods"));
-        log::log(context);
-        if fail_count == 1 { last_error = error_string; }
+        
+        let _ = app.emit("refresh-progress", serde_json::json!({
+            "playlist": source_name,
+            "activity": format!("Saving Live TV ({} items)...", streams.len()),
+            "percent": (current_offset as f32 / grand_total as f32 * 100.0) as u32
+        }).to_string());
+        
+        match process_xtream(app, &source_name, "Live TV", &tx, streams.clone(), cats, &source, media_type::LIVESTREAM, current_offset, grand_total) {
+            Ok(_) => current_offset += streams.len(),
+            Err(e) => {
+                log::log(format!("[Backend] [{}] Error processing Live TV: {:?}", source_name, e));
+                last_error = e.to_string();
+                fail_count += 1;
+            }
+        }
+    } else if let Err(e) = live {
+        log::log(format!("[Backend] [{}] Failed to fetch Live Streams: {:?}", source_name, e));
+        last_error = e.to_string();
         fail_count += 1;
-    });
+    }
 
-    current_offset += vods_count;
-    let _ = app.emit("refresh-progress", serde_json::json!({
-        "playlist": source_name,
-        "activity": "Saving Series...",
-        "percent": (current_offset as f32 / grand_total as f32 * 100.0) as u32
-    }).to_string());
-    series
-        .and_then(|series: Vec<XtreamStream>| {
-            process_xtream(app, &source_name, "Series", &tx, series, series_cats?, &source, media_type::SERIE, current_offset, grand_total)
-        })
-        .unwrap_or_else(|e| {
-            let error_string = e.to_string();
-            let context = format!("{:?}", e.context("Failed to process series"));
-            log::log(context);
-             if fail_count == 2 { last_error = error_string; }
-            fail_count += 1;
+    // --- MOVIES ---
+    if let Ok(streams) = vods {
+        let cats = vods_cats.unwrap_or_else(|_e| {
+            Vec::new()
         });
 
-    if fail_count > 2 {
+        let _ = app.emit("refresh-progress", serde_json::json!({
+            "playlist": source_name,
+            "activity": format!("Saving Movies ({} items)...", streams.len()),
+            "percent": (current_offset as f32 / grand_total as f32 * 100.0) as u32
+        }).to_string());
+
+        match process_xtream(app, &source_name, "Movies", &tx, streams.clone(), cats, &source, media_type::MOVIE, current_offset, grand_total) {
+            Ok(_) => current_offset += streams.len(),
+            Err(e) => {
+                log::log(format!("[Backend] [{}] Error processing Movies: {:?}", source_name, e));
+                if fail_count == 1 { last_error = e.to_string(); }
+                fail_count += 1;
+            }
+        }
+    } else if let Err(e) = vods {
+         log::log(format!("[Backend] [{}] Failed to fetch VOD Streams: {:?}", source_name, e));
+         if fail_count == 1 { last_error = e.to_string(); }
+         fail_count += 1;
+    }
+
+    // --- SERIES ---
+    if let Ok(streams) = series {
+        let cats = series_cats.unwrap_or_else(|_e| {
+            Vec::new()
+        });
+
+        let _ = app.emit("refresh-progress", serde_json::json!({
+            "playlist": source_name,
+            "activity": format!("Saving Series ({} items)...", streams.len()),
+            "percent": (current_offset as f32 / grand_total as f32 * 100.0) as u32
+        }).to_string());
+
+        match process_xtream(app, &source_name, "Series", &tx, streams.clone(), cats, &source, media_type::SERIE, current_offset, grand_total) {
+            Ok(_) => {}, // Last block, no need to update offset
+            Err(e) => {
+                log::log(format!("[Backend] [{}] Error processing Series: {:?}", source_name, e));
+                if fail_count == 2 { last_error = e.to_string(); }
+                fail_count += 1;
+            }
+        }
+    } else if let Err(e) = series {
+         log::log(format!("[Backend] [{}] Failed to fetch Series Streams: {:?}", source_name, e));
+         if fail_count == 2 { last_error = e.to_string(); }
+         fail_count += 1;
+    }
+
+    if fail_count >= 3 {
         let _ = tx.rollback();
-        return Err(anyhow::anyhow!(last_error));
+        return Err(anyhow::anyhow!("Total refresh failed for '{}'. Last error: {}", source_name, last_error));
     }
     if wipe {
         sql::restore_preserve(&tx, source.id.context("no source id")?, channel_preserve)?;
@@ -307,7 +348,30 @@ where
     T: serde::de::DeserializeOwned,
 {
     url.query_pairs_mut().append_pair("action", action);
-    let data = client.get(url).send().await?.json::<T>().await?;
+    
+    // Read text first for debugging
+    let response = client
+        .get(url.clone())
+        .header("Accept", "application/json")
+        .send()
+        .await?;
+    let status = response.status();
+    let text = response.text().await?;
+    
+    if !status.is_success() {
+       crate::log::log(format!("[Backend] HTTP Error {} for '{}' / {}. Action: {}", status, source_name, category, action));
+    }
+
+    let data = match serde_json::from_str::<T>(&text) {
+        Ok(d) => d,
+        Err(e) => {
+            let snippet = if text.len() > 100 { &text[..100] } else { &text };
+            let err_msg = format!("Failed to parse JSON for '{}' / {}. Error: {}. Response (first 100 chars): {}", source_name, category, e, snippet);
+            crate::log::log(format!("[Backend] ERROR: {}", err_msg));
+            return Err(anyhow::anyhow!(err_msg));
+        }
+    };
+
     let _ = app.emit("refresh-progress", serde_json::json!({
         "playlist": source_name,
         "activity": format!("Downloaded {}.", category),
@@ -347,7 +411,7 @@ fn process_xtream<R: tauri::Runtime>(
             }).to_string());
         }
         let category_name = get_cat_name(&cats, get_serde_json_string(&live.category_id).as_deref());
-        convert_xtream_live_to_channel(live, source, stream_type, category_name)
+        match convert_xtream_live_to_channel(live, source, stream_type, category_name)
             .and_then(|mut channel| {
                 if let Some(source_id) = source.id {
                     sql::set_channel_group_id(
@@ -360,8 +424,12 @@ fn process_xtream<R: tauri::Runtime>(
                 }
                 sql::insert_channel(tx, channel)?;
                 Ok(())
-            })
-            .unwrap_or_else(|e| log::log(format!("{:?}", e)));
+            }) {
+                Ok(_) => {},
+                Err(e) => {
+                    log::log(format!("{:?}", e));
+                }
+            }
     }
     Ok(())
 }
@@ -459,9 +527,23 @@ fn get_url(
     stream_type: u8,
     extension: Option<&str>,
 ) -> Result<String> {
+    let origin = match &source.url_origin {
+        Some(o) => o.clone(),
+        None => {
+            if let Some(mut u_str) = source.url.clone() {
+                if !u_str.starts_with("http") {
+                    u_str = format!("http://{}", u_str);
+                }
+                Url::parse(&u_str)?.origin().ascii_serialization()
+            } else {
+                return Err(anyhow::anyhow!("Source has no url or origin"));
+            }
+        }
+    };
+
     Ok(format!(
         "{}/{}/{}/{}/{}.{}",
-        source.url_origin.as_ref().context("no url origin")?,
+        origin,
         get_media_type_string(stream_type)?,
         source.username.as_ref().context("no username")?,
         source.password.as_ref().context("no password")?,
