@@ -28,7 +28,7 @@ use crate::{
     types::Source,
     xtream,
 };
-use ::log::{info, warn, error};
+use ::log::{info, error};
 use anyhow::{Context, Result};
 use chrono::{DateTime, Local, Utc};
 use directories::ProjectDirs;
@@ -449,17 +449,13 @@ pub fn get_bin(bin: &str) -> String {
                 return local_bin;
             }
         }
-    }
 
-    if OS == "linux" || which(bin).is_ok() {
-        return bin.to_string();
+        if OS == "linux" || which(bin).is_ok() {
+            return bin.to_string();
+        }
+        
+        return get_bin_from_deps(bin);
     }
-    
-    #[cfg(not(target_os = "macos"))]
-    return get_bin_from_deps(bin);
-    
-    #[cfg(target_os = "macos")]
-    return bin.to_string(); // Fallback for macos if not found
 }
 
 #[cfg(not(target_os = "macos"))]
@@ -472,7 +468,7 @@ fn get_bin_from_deps(bin: &str) -> String {
     if path.exists() {
         // Reduced verbosity
     } else {
-        warn!("[Backend] Binary NOT found at: {:?}", path);
+        log::warn!("[Backend] Binary NOT found at: {:?}", path);
         // Fallback for dev mode: check src-tauri/deps
         let mut dev_path = current_exe().unwrap_or_else(|_| PathBuf::from("."));
         dev_path.pop();
@@ -484,7 +480,7 @@ fn get_bin_from_deps(bin: &str) -> String {
             // Found in dev fallback
             return dev_path.to_string_lossy().to_string();
         } else {
-            warn!("[Backend] Binary NOT found in dev-fallback: {:?}", dev_path);
+            log::warn!("[Backend] Binary NOT found in dev-fallback: {:?}", dev_path);
         }
     }
 
