@@ -2985,7 +2985,7 @@ dependencies = [
 
 [[package]]
 name = "open_tv"
-version = "2.1.7"
+version = "2.1.8"
 dependencies = [
  "anyhow",
  "base64 0.22.1",
