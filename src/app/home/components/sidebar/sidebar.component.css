@@ -1,6 +1,8 @@
 :host {
-  display: block;
+  display: block !important;
   flex-shrink: 0;
+  width: 90px !important;
+  height: 100vh;
   z-index: 50;
 }
 
@@ -41,8 +43,9 @@
 }
 
 .sidebar-logo-persistent {
-  height: 48px; /* Slightly larger, cleaner */
-  width: 48px;
+  height: 48px !important;
+  width: 48px !important;
+  max-width: 100% !important;
   object-fit: contain;
   filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.2));
 }

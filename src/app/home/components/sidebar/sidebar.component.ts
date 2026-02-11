@@ -14,7 +14,6 @@ export interface NavItem {
   selector: 'app-sidebar',
   templateUrl: './sidebar.component.html',
   styleUrls: ['./sidebar.component.css'],
-  encapsulation: ViewEncapsulation.None,
 })
 export class SidebarComponent {
   @Input() currentViewType: ViewMode = ViewMode.All;
